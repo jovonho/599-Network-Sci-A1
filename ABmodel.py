@@ -70,8 +70,34 @@ def compare_degree_distrib(A1, A2):
     plt.show()
 
 
+# No binning, just raw data
+def plot_degree_distrib(A):
+    degrees1 = np.array([sum(line) for line in A.A])
+    total_degree1 = sum(degrees1)
+
+    print(f"Degrees: {degrees1}, len(degrees): {len(degrees1)}")
+    print(f"Total degree: {total_degree1}")
+
+    counts1 = collections.Counter(degrees1)
+
+    X1, Y1 = list(counts1.keys()), list(counts1.values())
+
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(13, 7))
+
+    ax1.set_title("Method 1: random candidate choice")
+    ax1.set_ylabel("P(k)")
+    ax1.set_xlabel("k")
+    ax1.set_xscale('log', base=10)
+    ax1.set_yscale('log', base=10)
+    ax1.tick_params(which='both', direction="in")
+
+    ax1.scatter(X1, Y1)
+
+    fig.tight_layout()
+    plt.show()
+
 # Complexity: O(n^2)
-def generate_AB_graph(n, m):
+def generate_AB_graph_random(n, m):
 
     # Initialize our data structures
 
@@ -136,7 +162,11 @@ def generate_AB_graph(n, m):
                 col.extend([i, k])
 
                 # Increment the degrees of each node in the dictionary to use it when adding the next node
-                nodes[i] = 1
+                if i in nodes:
+                    nodes[i] += 1
+                else:
+                    nodes[i] = 1
+
                 nodes[k] += 1
 
                 # Total degree increases by 2, since we add symmetric links
@@ -153,8 +183,8 @@ def generate_AB_graph(n, m):
     return graph.tocsr()
 
 
-# Complexity: O(n^2)
-def generate_AB_graph_2(n, m):
+# Complexity: O(n^2) but much quicker than randomly picking candidates in practice
+def generate_AB_graph(n, m):
 
     # Initialize our data structures
 
@@ -209,7 +239,11 @@ def generate_AB_graph_2(n, m):
                 col.extend([i, k])
 
                 # Increment the degrees of each node in the dictionary to use it when adding the next node
-                nodes[i] = 1
+                if i in nodes:
+                    nodes[i] += 1
+                else:
+                    nodes[i] = 1
+
                 nodes[k] += 1
 
                 # Total degree increases by 2, since we add symmetric links
@@ -235,20 +269,22 @@ def main():
     # UNCOMMENT for more logging    
     # log.setLevel(logging.DEBUG)
 
-    n=5000
+    n=3000
     m=2
 
-    t1 = time.time()
-    graph1 = generate_AB_graph(n=n, m=m)
-    t2 = time.time()
-    print(f"Time to generate AB model(n={n}, m={m}) with version 1: {t2-t1} s")
+    # t1 = time.time()
+    # graph1 = generate_AB_graph_random(n=n, m=m)
+    # t2 = time.time()
+    # print(f"Time to generate AB model(n={n}, m={m}) with version 1: {t2-t1} s")
 
     t1 = time.time()
-    graph2 = generate_AB_graph_2(n=n, m=m)
+    graph2 = generate_AB_graph(n=n, m=m)
     t2 = time.time()
     print(f"Time to generate AB model(n={n}, m={m}) with version 2: {t2-t1} s")
 
-    compare_degree_distrib(graph1, graph2)
+    # compare_degree_distrib(graph1, graph2)
+
+    plot_degree_distrib(graph2)
 
 
 if __name__=='__main__':
