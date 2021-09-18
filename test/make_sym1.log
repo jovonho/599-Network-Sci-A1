@@ -1,0 +1,113 @@
+
+
+Self edge indices: []
+0 self edges removed
+91826 rows remain
+
+Number edges before removing (i, j) (j, i) pairs 91826
+Number edges after removing (i, j) (j, i) pairs 56853
+Filename: C:\Users\lhv\VSCode\COMP599\Assignment1\A1.py
+
+Line #    Mem usage    Increment  Occurences   Line Contents
+============================================================
+    34     84.0 MiB     84.0 MiB           1   @profile
+    35                                         def make_symmetric(edgelist):
+    36
+    37     84.0 MiB      0.0 MiB           1       print(f"\nNumber edges before removing (i, j) (j, i) pairs {len(edgelist)}")
+    38
+    39                                             # O(E) time, O(E^2) space
+    40                                             # edgelist = list(set(frozenset(edge) for edge in edgelist if edge[0] != edge[1]))
+    41
+    42
+    43    108.6 MiB     24.5 MiB       91829       edgelist = [frozenset(edge) for edge in edgelist if edge[0] != edge[1]]
+    44
+    45    111.2 MiB      2.6 MiB           1       edgelist = set(edgelist)
+    46
+    47    109.2 MiB     -2.0 MiB           1       edgelist = list(edgelist)
+    48
+    49
+    50                                             # Complexity?
+    51                                             # This will remove one of each symmetric edge of form (i, j), (j, i)
+    52                                             # edgelist = list(set(edgelist))
+    53                                             # print(edgelist)
+    54
+    55    113.5 MiB    -23.8 MiB       56856       edgelist = np.array([list(edge) for edge in edgelist])
+    56
+    57     85.4 MiB    -28.1 MiB           1       print(f"Number edges after removing (i, j) (j, i) pairs {len(edgelist)}")
+    58
+    59     85.4 MiB      0.0 MiB           1       return edgelist
+
+
+A nnz: 113706
+A shape: (36595, 36595)
+Time to load the graph: 7.864711046218872 s
+Filename: C:\Users\lhv\VSCode\COMP599\Assignment1\A1.py
+
+Line #    Mem usage    Increment  Occurences   Line Contents
+============================================================
+    93     81.2 MiB     81.2 MiB           1   @profile
+    94                                         def load_matrix(filename="./data/metabolic.edgelist.txt"):
+    95     81.2 MiB      0.0 MiB           1       t1 = time.time()
+    96     84.3 MiB      3.1 MiB           1       edgelist = np.loadtxt(filename, dtype=np.int32)
+    97
+    98     84.0 MiB     -0.3 MiB           1       edgelist = remove_self_edges(edgelist)
+    99     83.1 MiB     -0.9 MiB           1       edgelist = make_symmetric(edgelist)
+   100
+   101                                             # Create the graph in CSC form
+   102     83.1 MiB      0.0 MiB           1       rows = edgelist[:,0]
+   103     83.1 MiB      0.0 MiB           1       cols = edgelist[:,1]
+   104     83.5 MiB      0.4 MiB           1       data = np.ones(len(edgelist))
+   105
+   106     83.5 MiB      0.0 MiB           1       n = np.amax(edgelist) + 1
+   107     83.8 MiB      0.2 MiB           1       graph = sparse.coo_matrix((data ,(rows, cols)), shape=(n, n), dtype=np.int32)
+   108     84.8 MiB      1.1 MiB           1       graph = graph.tocsr()
+   109
+   110                                             # TODO: Complexity?
+   111     85.9 MiB      1.0 MiB           1       A = graph + graph.T
+   112
+   113                                             # A = make_symmetric2(graph)
+   114
+   115     85.9 MiB      0.0 MiB           1       print(f"A nnz: {A.nnz}")
+   116     85.9 MiB      0.0 MiB           1       print(f"A shape: {A.shape}")
+   117
+   118     85.9 MiB      0.0 MiB           1       t2 = time.time()
+   119     85.9 MiB      0.0 MiB           1       print(f"Time to load the graph: {t2-t1} s")
+   120
+   121                                             # sanity_check(A)
+   122
+   123     85.9 MiB      0.0 MiB           1       return A
+
+
+Total running time: 7.883542776107788 s
+
+
+
+
+Filename: C:\Users\lhv\VSCode\COMP599\Assignment1\A1.py
+
+Line #    Mem usage    Increment  Occurences   Line Contents
+============================================================
+   303     81.2 MiB     81.2 MiB           1   @profile
+   304                                         def main():
+   305     81.2 MiB      0.0 MiB           1       t1 = time.time()
+   306
+   307     81.2 MiB      0.0 MiB           1       print("\n\n")
+   308
+   309
+   310     84.4 MiB      3.1 MiB           1       A = load_matrix("./data/phonecalls.edgelist.txt")
+   311                                             # A = load_matrix("./data/internet.edgelist.txt")
+   312                                             # A = load_matrix("./data/test.txt")
+   313                                             # print(A.todense())
+   314
+   315                                             # plot_degree_distrib(A)
+   316                                             # cc, d, avg_cc = get_clustering_coefs(A, avg=True)
+   317
+   318                                             # b_plot_clustering_coef_distrib(A)
+   319
+   320                                             # g_plot_clustering_degree_rel(A)
+   321
+   322     84.4 MiB      0.0 MiB           1       t2 = time.time()
+   323     84.4 MiB      0.0 MiB           1       print(f"Total running time: {t2-t1} s")
+   324
+   325
+   326     84.4 MiB      0.0 MiB           1       print("\n\n\n")
