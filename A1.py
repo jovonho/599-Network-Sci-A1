@@ -139,8 +139,6 @@ def plot_degree_distrib(A):
     print(f"{X[4]}: {Y[4]}")
     
 
-    
-
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(13, 7))
 
     ax1.set_title("Raw Data")
@@ -154,11 +152,11 @@ def plot_degree_distrib(A):
 
     # plt.show()
 
-    fit = Polynomial.fit(np.log10(X), np.log10(Y), deg=1)
-    print(f"Exponent: {fit.coef[0]}")
+    # fit = Polynomial.fit(np.log10(X), np.log10(Y), deg=1)
+    # print(f"Exponent: {fit.coef[0]}")
 
-    yfit = lambda x: np.power(10, fit(np.log10(x)))
-    ax1.plot(X, yfit(X))
+    # yfit = lambda x: np.power(10, fit(np.log10(x)))
+    # ax1.plot(X, yfit(X))
 
 
     # Log binning
@@ -205,7 +203,7 @@ def plot_degree_distrib(A):
 
     # ax2.scatter(x_bin_means, y_bin_means, c='r')
     ax2.scatter(hist_norm, widths, c='r')
-    ax2.plot(X, yfit(X))
+    # ax2.plot(X, yfit(X))
 
     plt.show()
 
@@ -526,9 +524,9 @@ def main():
     # A = load_matrix("./data/test.txt")
     # print(A.todense())
 
-    # plot_degree_distrib(A)
+    plot_degree_distrib(A)
 
-    plot_shortest_paths(A)
+    # plot_shortest_paths(A)
 
     # get_connected_compo(A)
 
