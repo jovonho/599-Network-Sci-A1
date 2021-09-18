@@ -36,8 +36,9 @@ Shortest paths shape: (36595, 36595)
 Time to plot shortest paths: 510.29020857810974 s
 Total running time: 511.5030481815338 s
 
-with directed=False, unweighted=True, and input upper triangular
 
+
+with directed=False, unweighted=True, and input upper triangular
 A nnz: 113706
 A shape: (36595, 36595)
 Time to load the graph: 0.6580636501312256 s

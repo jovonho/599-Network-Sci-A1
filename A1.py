@@ -247,13 +247,17 @@ def get_clustering_coefs(graph, avg=False):
     
 
 # It does phonecalls in ~7min
+# About O(n3)
 def plot_shortest_paths(graph):
     t1 = time.time()
-    # Saw the note in docu, but out graphs are always symmetric so should work fine.
+    # Saw the note in documentation about D possible conflict with directed=False 
+    # but out graphs are always symmetric so should work fine.
     # shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False, unweighted=True )
-    shortest_paths = sparse.csgraph.shortest_path(graph, method='D')
 
-    # Can give memory error
+    # TODO Find out which one is fastest
+    shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False)
+
+    # Can give memory error with large graphs
     shortest_paths = sparse.triu(shortest_paths)
 
     avg_sp = shortest_paths.sum() / shortest_paths.nnz
@@ -263,6 +267,8 @@ def plot_shortest_paths(graph):
     counts = Counter(shortest_paths.data)
 
     print(counts)
+
+    print(f"List of all shortest path lengths: {shortest_paths.data}")
 
     t2 = time.time()
     print(f"Time to get shortest paths: {t2-t1} s")
@@ -281,8 +287,11 @@ def plot_shortest_paths(graph):
 
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-    # ax.hist(cc, bins=bins, color='purple')
-    sns.displot(shortest_paths.data, hist = False, kde = True, kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
+
+
+    ax.hist(shortest_paths.data, color='purple')
+    # sns.distplot(shortest_paths.data, hist = False, kde = True, kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
+
     fig.tight_layout()
 
     plt.show()
@@ -404,7 +413,6 @@ def b_plot_clustering_coef_distrib(A):
     cc, _, avg_cc = get_clustering_coefs(A, avg=True)
 
     print(f"Avg cc: {avg_cc}")
-    # print(cc)
 
     counts = Counter(cc)
 
@@ -416,26 +424,29 @@ def b_plot_clustering_coef_distrib(A):
 
     fig, ax = plt.subplots(figsize=(13, 7))
 
-    # the x coords of this transformation are data, and the
-    # y coord are axes
-    trans = ax.get_xaxis_transform()
 
-    ax.set_title("Clustering Coef Distribution")
+
+    ax.set_title("Metabolic: Clustering Coef Distribution")
     ax.set_xlabel("Local Clustering Coefficient")
     ax.set_ylabel("Density")
 
     avg_cc_label = "{:.3f}".format(avg_cc)
 
+    # Draw line for the mean
     ax.axvline(x=avg_cc, color='grey', linestyle='--', alpha=.7)
+
+    # Used to position the mean label
+    trans = ax.get_xaxis_transform()
     ax.text(avg_cc + .02, .9, f"Mean = {avg_cc_label}", transform=trans)
 
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+
     # ax.hist(cc, bins=bins, color='purple')
     # sns.displot(cc, kind='kde', kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
     sns.kdeplot(data=cc, fill=True, color='purple', ax=ax)
-    fig.tight_layout()
 
+    fig.tight_layout()
     plt.show()
 
 
@@ -510,14 +521,14 @@ def main():
     print("\n\n")
 
 
-    A = load_matrix("./data/phonecalls.edgelist.txt")
-    # A = load_matrix("./data/protein.edgelist.txt")
+    # A = load_matrix("./data/phonecalls.edgelist.txt")
+    A = load_matrix("./data/powergrid.edgelist.txt")
     # A = load_matrix("./data/test.txt")
     # print(A.todense())
 
     # plot_degree_distrib(A)
 
-    # plot_shortest_paths(A)
+    plot_shortest_paths(A)
 
     # get_connected_compo(A)
 
@@ -527,7 +538,7 @@ def main():
 
     # b_plot_clustering_coef_distrib(A)
 
-    g_plot_clustering_degree_rel(A)
+    # g_plot_clustering_degree_rel(A)
 
     t2 = time.time()
     print(f"Total running time: {t2-t1} s")
