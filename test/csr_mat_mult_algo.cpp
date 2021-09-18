@@ -1,3 +1,5 @@
+TAKEN FROM https://github.com/scipy/scipy/blob/701ffcc8a6f04509d115aac5e5681c538b5265a2/scipy/sparse/sparsetools/csr.h#L542-L544
+
 /*
  * Compute C = A*B for CSR matrices A,B
  *

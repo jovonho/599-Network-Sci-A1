@@ -3,12 +3,14 @@ from os import altsep
 from typing import Counter
 from matplotlib import lines
 import numpy as np
+from numpy.core.fromnumeric import size
 import scipy as sp
-from scipy import sparse, linalg
+from scipy import sparse, linalg, stats
 import pandas as pd
 import matplotlib.pyplot as plt 
 from numpy.polynomial import Polynomial
 import time
+import seaborn as sns
 
 from memory_profiler import profile
 
@@ -222,7 +224,16 @@ def get_clustering_coefs(graph, avg=False):
 
     n = A3.shape[0]
 
+    #Note: accessing by index is slow
+
     clustering_coefs = [A3[i,i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
+
+    A3_diag = A3.diagonal()
+    print(A3_diag)
+
+    clustering_coefs2 = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
+
+    print(f"If method2 == method1? {clustering_coefs == clustering_coefs2}")
 
     # print(f"clustering coefs: {clustering_coefs}")
     t2 = time.time()
@@ -235,9 +246,156 @@ def get_clustering_coefs(graph, avg=False):
     return clustering_coefs, deg
     
 
+# It does phonecalls in ~7min
 def plot_shortest_paths(graph):
+    t1 = time.time()
     # Saw the note in docu, but out graphs are always symmetric so should work fine.
-    shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False)
+    # shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False, unweighted=True )
+    shortest_paths = sparse.csgraph.shortest_path(graph, method='D')
+
+    # Can give memory error
+    shortest_paths = sparse.triu(shortest_paths)
+
+    avg_sp = shortest_paths.sum() / shortest_paths.nnz
+
+    print(f"Average path length: {avg_sp}")
+
+    counts = Counter(shortest_paths.data)
+
+    print(counts)
+
+    t2 = time.time()
+    print(f"Time to get shortest paths: {t2-t1} s")
+
+    fig, ax = plt.subplots()
+
+    trans = ax.get_xaxis_transform()
+
+    ax.set_title("Shortest Path Distribution")
+    ax.set_xlabel("Shortest Path Length")
+    ax.set_ylabel("Count")
+
+    avg_cc_label = "{:.2f}".format(avg_sp)
+    ax.axvline(x=avg_sp, color='grey', linestyle='--', alpha=.7)
+    ax.text(avg_sp + .02, .9, f"Mean = {avg_cc_label}", transform=trans)
+
+    ax.grid(True, which='both', linestyle='--')
+    ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+    # ax.hist(cc, bins=bins, color='purple')
+    sns.displot(shortest_paths.data, hist = False, kde = True, kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
+    fig.tight_layout()
+
+    plt.show()
+
+
+
+
+
+def get_connected_compo(graph):
+    t1 = time.time()
+    con_comp, labels = sparse.csgraph.connected_components(graph, directed=False, return_labels=True)
+    print(f"Number of Connected Components: {con_comp}")
+
+    N = labels.shape[0]
+    print(f"Length of labels (num nodes): {N}")
+
+    counts = Counter(labels)
+
+    GCC, GCC_len = counts.most_common(1)[0]
+
+    nodes_in_GCC = GCC_len / N
+
+    print(f"Proportion of nodes in GCC: {nodes_in_GCC}")
+
+    t2 = time.time()    
+    print(f"Time to get comnnected components: {t2-t1} s")
+
+
+
+
+def get_degree_correl(graph):
+    t1 = time.time()
+    degs = get_degrees(graph)
+    n = degs.shape[0]
+
+    X = []
+    Y = []
+
+    # O(n2)
+    # Efficient row slicing with CSR
+    for i in range(n):
+        row = graph[i,:].toarray()[0]
+        # print(f"Row {i}: {row}")
+        
+        for j in range(n):
+            if row[j] == 1:
+                # print(f"Node {i} links to node {j}")
+                X.append(degs[i])
+                Y.append(degs[j])
+
+
+    # O(n2)
+    # Efficient row slicing with CSR
+    for i in range(n):
+        row = graph.getrow(i).toarray()[0]
+        # print(f"Row {i}: {row}")
+        
+        for j in range(n):
+            if row[j] == 1:
+                # print(f"Node {i} links to node {j}")
+                X.append(degs[i])
+                Y.append(degs[j])
+
+
+    dataset = pd.DataFrame({'di': X, 'dj': Y}, columns=['di', 'dj'])
+
+    t2 = time.time()    
+    print(f"Time to calculate degree correlations: {t2-t1} s")
+
+    # correl = np.corrcoef(X, Y)
+    # print(f"Correl {correl}")
+
+    slope, intercept, r_value, p_value, std_err = stats.linregress(X, Y)
+    print(f"R2 {r_value}")
+    print(f"slope {slope}")
+    print(f"intercept {intercept}")
+
+    # m, b = np.polyfit(X, Y, 1)
+    # print(f"m {m}")
+    # print(f"b {b}")
+
+    fig, ax = plt.subplots()
+    ax.set_title("Degree Correlation")
+    ax.set_xlabel("di")
+
+    ax.set_ylabel("dj")
+
+    planets = sns.load_dataset('planets')
+
+    print(planets)
+
+    # Should be length 2L * 2
+    print(dataset.shape)
+    print(dataset)
+
+    print(f"Max X: {max(X)}")
+    print(f"Max Y: {max(Y)}")
+
+
+    # Create empty plot with blank marker containing the extra label
+    R = "{:.2f}".format(r_value)
+    ax.plot([], [], ' ', label=f"R: {R}")
+
+    ax.grid(True, which='both', linestyle='--')
+    ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+
+    # ax.scatter(X, Y, color='purple', s=1 )
+    sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), cbar=True)
+
+    ax.legend() 
+    fig.tight_layout()
+
+    plt.show()
 
 
 
@@ -245,7 +403,8 @@ def plot_shortest_paths(graph):
 def b_plot_clustering_coef_distrib(A):
     cc, _, avg_cc = get_clustering_coefs(A, avg=True)
 
-    # print(f"Avg cc: {avg_cc}")
+    print(f"Avg cc: {avg_cc}")
+    # print(cc)
 
     counts = Counter(cc)
 
@@ -261,31 +420,67 @@ def b_plot_clustering_coef_distrib(A):
     # y coord are axes
     trans = ax.get_xaxis_transform()
 
-
     ax.set_title("Clustering Coef Distribution")
     ax.set_xlabel("Local Clustering Coefficient")
-    ax.set_ylabel("Count")
+    ax.set_ylabel("Density")
 
-    avg_cc_label = "{:.2f}".format(avg_cc)
+    avg_cc_label = "{:.3f}".format(avg_cc)
 
     ax.axvline(x=avg_cc, color='grey', linestyle='--', alpha=.7)
     ax.text(avg_cc + .02, .9, f"Mean = {avg_cc_label}", transform=trans)
 
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-    ax.hist(cc, bins=bins, color='purple')
+    # ax.hist(cc, bins=bins, color='purple')
+    # sns.displot(cc, kind='kde', kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
+    sns.kdeplot(data=cc, fill=True, color='purple', ax=ax)
     fig.tight_layout()
 
     plt.show()
 
+
+def eigenval_distrib(graph):
+
+    t1 = time.time()
+
+    L = sparse.csgraph.laplacian(graph)
+
+    # Need to use float
+    eigenvals = sparse.linalg.eigsh(graph.asfptype(), k=graph.shape[0]-1, return_eigenvectors=False)
+    eigenvals_L = sparse.linalg.eigsh(L.asfptype(), k=L.shape[0]-1, return_eigenvectors=False)
+
+    t2 = time.time()    
+    print(f"Time to gt Eigenvals: {t2-t1} s")
+
+    print(f"eigenvals shape: {eigenvals.shape}")
+    print(f"Eigenvals: {eigenvals}")
+
+    fig, (ax1, ax2) = plt.subplots(nrows=2, figsize=(13, 7))
+
+    ax1.set_title("Eigenvalue Distribution of Adjacency Matrix")
+    ax1.set_xlabel("Eigenvalue")
+    ax1.set_ylabel("Density")
+
+    ax1.grid(True, which='both', linestyle='--')
+    ax1.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+    sns.kdeplot(data=eigenvals, fill=True, color='purple', ax=ax1)
+
+    ax2.set_title("Eigenvalue Distribution of Laplacian Matrix")
+    ax2.set_xlabel("Eigenvalue")
+    ax2.set_ylabel("Density")
+
+    ax2.grid(True, which='both', linestyle='--')
+    ax2.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+    sns.kdeplot(data=eigenvals_L, fill=True, color='purple', ax=ax2)
+
+    fig.tight_layout()
+    plt.show()
 
 
 # Complexity: 
 def g_plot_clustering_degree_rel(A):
 
     cc, d = get_clustering_coefs(A)
-
-    
 
     fig, ax = plt.subplots(figsize=(13, 7))
 
@@ -297,10 +492,17 @@ def g_plot_clustering_degree_rel(A):
 
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-    ax.scatter(cc, d, c='purple')
+    # ax.scatter(cc, d, c='purple')
+
+    dataset = pd.DataFrame({'clust_coef': cc, 'degree': d}, columns=['clust_coef', 'degree'])
+
+    sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), cbar=True)
+
     fig.tight_layout()
 
     plt.show()
+
+
 
 def main():
     t1 = time.time()
@@ -308,19 +510,24 @@ def main():
     print("\n\n")
 
 
-    # A = load_matrix("./data/email.edgelist.txt")
     A = load_matrix("./data/phonecalls.edgelist.txt")
+    # A = load_matrix("./data/protein.edgelist.txt")
     # A = load_matrix("./data/test.txt")
     # print(A.todense())
 
     # plot_degree_distrib(A)
-    # cc, d, avg_cc = get_clustering_coefs(A, avg=True)
 
     # plot_shortest_paths(A)
 
-    b_plot_clustering_coef_distrib(A)
+    # get_connected_compo(A)
 
-    # g_plot_clustering_degree_rel(A)
+    # get_degree_correl(A)
+
+    # eigenval_distrib(A)
+
+    # b_plot_clustering_coef_distrib(A)
+
+    g_plot_clustering_degree_rel(A)
 
     t2 = time.time()
     print(f"Total running time: {t2-t1} s")

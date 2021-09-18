@@ -2,6 +2,8 @@
 
 Filename: C:\Users\lhv\VSCode\COMP599\Assignment1\A1.py
 
+--> Try using sparse.maximum()
+
 Line #    Mem usage    Increment  Occurences   Line Contents
 ============================================================
     87     84.3 MiB     84.3 MiB           1   @profile
