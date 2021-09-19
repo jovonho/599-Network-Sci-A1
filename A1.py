@@ -462,8 +462,14 @@ def eigenval_distrib(graph):
     t2 = time.time()    
     print(f"Time to gt Eigenvals: {t2-t1} s")
 
-    print(f"eigenvals shape: {eigenvals.shape}")
-    print(f"Eigenvals: {eigenvals}")
+    print(f"Adjacency eigenvals shape: {eigenvals.shape}")
+    print(f"Eigenvalues of adjacency matrix: {eigenvals}")
+    
+    print(f"Laplacian eigenvals shape: {eigenvals_L.shape}")
+    print(f"Eigenvalues of Laplacian matrix: {eigenvals_L}")
+    
+    num_zeros = sparse.csgraph.connected_components(sp.sparse.csgraph.laplacian(graph), directed=False, return_labels=False)
+    print(f"Spectral gap: {eigenvals_L[len(eigenvals_L)-1-num_zeros]}")
 
     fig, (ax1, ax2) = plt.subplots(nrows=2, figsize=(13, 7))
 
@@ -473,7 +479,7 @@ def eigenval_distrib(graph):
 
     ax1.grid(True, which='both', linestyle='--')
     ax1.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-    sns.kdeplot(data=eigenvals, fill=True, color='purple', ax=ax1)
+    sns.kdeplot(data=eigenvals.real, fill=True, color='purple', ax=ax1)
 
     ax2.set_title("Eigenvalue Distribution of Laplacian Matrix")
     ax2.set_xlabel("Eigenvalue")
@@ -481,7 +487,7 @@ def eigenval_distrib(graph):
 
     ax2.grid(True, which='both', linestyle='--')
     ax2.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-    sns.kdeplot(data=eigenvals_L, fill=True, color='purple', ax=ax2)
+    sns.kdeplot(data=eigenvals_L.real, fill=True, color='purple', ax=ax2)
 
     fig.tight_layout()
     plt.show()
