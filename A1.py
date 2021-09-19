@@ -1,4 +1,5 @@
 from functools import total_ordering
+from math import isnan
 from os import altsep
 from typing import Counter
 from matplotlib import lines
@@ -11,7 +12,8 @@ import matplotlib.pyplot as plt
 from numpy.polynomial import Polynomial
 import time
 import seaborn as sns
-import ABmodel
+import math 
+
 
 from memory_profiler import profile
 
@@ -136,7 +138,8 @@ def log_binning(counter_dict, bin_count=35):
 
 def plot_degree_distrib(A):
 
-    degrees = np.array([sum(line) for line in A.A])
+    degrees = get_degrees(A)
+
     total_degree = sum(degrees)
     print(f"\nTotal degree: {total_degree}")
 
@@ -161,40 +164,67 @@ def plot_degree_distrib(A):
 
     print(f"pk {pk}")
 
-    # For log bins to be clean, the max needs to be a power of base and num needs to be 1 more than that
-    # This way, we will have bins spaced according to each power of base. E.g. [1, 10, 100, 1000]
+
     stop = np.ceil(np.log10(max(k)))
-    bins = np.logspace(start=0, stop=stop, base=10, num=50)
 
-    print(bins)
+    # This is a dark art, too many bins and the first few contain no nodes 
+    num_bins = int(stop) * 15
+    
+    print(f"Num bins: {num_bins}")
+    bins = np.logspace(start=0, stop=stop, base=10, num=num_bins, endpoint=True)
 
-    # Need to bin values
-    digitized = np.digitize(k, bins)
+    # bins = np.linspace(start=min(k), stop=max(k), num=num_bins)
+
+    print(f"Bins: {bins}")
+
+    # Subtract 1 to get 0-based indices
+    digitized = np.digitize(degrees, bins) - 1
+
+    # digitized = np.digitize([10,3,56,2,3,1,1,1,1,5,7], [1,2,4,8]) - 1
 
     print(f"digitized: {digitized}")
 
-    # From NS Book Section 4.12.3. When using log binning, p<kn> is given by 
-    # Nn/bn : (Number of nodes in bin n) / (size of bin n)
 
-    Nn_count = Counter(digitized)
-    print(f"Nn_count: {Nn_count}")
 
-    Nn = np.array(list(Nn_count.values()))
+    bin_counts = Counter(digitized)
+    print(f"Nn_count: {bin_counts}")
+
+    Nn = []
+
+    for i in range(0, num_bins):
+        count = bin_counts[i]
+        # print(f"There are {count} nodes in bin {i}")
+        Nn.append(count)
+
+
+    while len(Nn) < (num_bins - 1):
+        Nn.append(0)
 
     print(f"Nn: {Nn}")
 
     bn = np.array(bins[1:] - bins[:-1])
-    print(f"Widths: {bn}\n")
 
-    pkn = Nn / bn
-    print(f"pkn: {pkn}")
-    print(f"len(k): {len(k)}")
-    print(f"len(pkn): {len(pkn)}")
-    
+    bn = np.append(bn, [bn[-1]*2])
 
-    # We don't calculate the bin size this way
-    # bin_means = [k[digitized == i].mean() for i in range(1, len(bins))]
-    # print(bin_means)
+    print(f"Bin widths: {bn}\n")
+
+    # From NS Book Section 4.12.3. When using log binning, p<kn> is given by 
+    # Nn/bn : (Number of nodes in bin n) / (size of bin n)
+
+    pkn = np.array(Nn) / bn
+    pkn = list(pkn / N)
+
+    # Average degree of nodes in each bin
+    kn = [degrees[digitized == i].mean() for i in range(0, len(bins))]
+
+    #clean up kn and pkn
+    kn_copy = kn.copy()
+    pkn_copy = pkn.copy()
+
+    for i in range(0, len(kn_copy)):
+        if math.isnan(kn_copy[i]) or kn_copy[i] == 0:
+            kn.remove(kn_copy[i])
+            pkn.remove(pkn_copy[i])
 
     
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(13, 7))
@@ -215,45 +245,25 @@ def plot_degree_distrib(A):
     ax2.set_yscale('log', base=10)
     ax2.tick_params(which='both', direction="in")
 
+    ax2.scatter(kn, pkn)
 
 
-    ax2.scatter(k, pkn)
+    fit1 = Polynomial.fit(np.log10(k), np.log10(pk), deg=1)
+    print(f"Fit1: {fit1.coef}")
+
+    yfit1 = lambda x: np.power(10, fit1(np.log10(x)))
+    ax1.plot(k, yfit1(k), c='r', label=f"Exp: {fit1.coef[0]}")
+    ax1.legend()
+
+    fit2 = Polynomial.fit(np.log10(kn), np.log10(pkn), deg=1)
+    print(f"Fit2: {fit2.coef}")
+
+    yfit2 = lambda x: np.power(10, fit2(np.log10(x)))
+    ax2.plot(kn, yfit2(kn), c='r', label=f"Exp: {fit2.coef[0]}")
+    ax2.legend()
 
     fig.tight_layout()
     plt.show()
-
-    # degree_centrality = degrees / N
-    # import networkx
-    # testG = networkx.readwrite.edgelist.read_edgelist("./data/test.txt")
-    # ba_c = networkx.degree_centrality(testG)
-
-    # # To convert normalized degrees to raw degrees
-    # #ba_c = {k:int(v*(len(ba_g)-1)) for k,v in ba_c.iteritems()}
-    # ba_c2 = dict(Counter(ba_c.values()))
-
-    # print(degree_centrality)
-    # print(ba_c)
-
-    # ba_x,ba_y = log_binning(ba_c2,50)
-
-    # plt.xscale('log')
-    # plt.yscale('log')
-    # plt.scatter(ba_x,ba_y,c='r',marker='s',s=50)
-    # plt.scatter(ba_c2.keys(),ba_c2.values(),c='b',marker='x')
-    # plt.xlim((1e-4,1e-1))
-    # plt.ylim((.9,1e4))
-    # plt.xlabel('Connections (normalized)')
-    # plt.ylabel('Frequency')
-    # plt.show()
-
-
-    # plt.show()
-
-    # fit = Polynomial.fit(np.log10(X), np.log10(Y), deg=1)
-    # print(f"Exponent: {fit.coef[0]}")
-
-    # yfit = lambda x: np.power(10, fit(np.log10(x)))
-    # ax1.plot(X, yfit(X))
 
 
 def get_degrees(graph):
@@ -386,17 +396,17 @@ def get_degree_correl(graph):
                 Y.append(degs[j])
 
 
-    # O(n2)
-    # Efficient row slicing with CSR
-    for i in range(n):
-        row = graph.getrow(i).toarray()[0]
-        # print(f"Row {i}: {row}")
+    # # O(n2)
+    # # Efficient row slicing with CSR
+    # for i in range(n):
+    #     row = graph.getrow(i).toarray()[0]
+    #     # print(f"Row {i}: {row}")
         
-        for j in range(n):
-            if row[j] == 1:
-                # print(f"Node {i} links to node {j}")
-                X.append(degs[i])
-                Y.append(degs[j])
+    #     for j in range(n):
+    #         if row[j] == 1:
+    #             # print(f"Node {i} links to node {j}")
+    #             X.append(degs[i])
+    #             Y.append(degs[j])
 
 
     dataset = pd.DataFrame({'di': X, 'dj': Y}, columns=['di', 'dj'])
@@ -563,10 +573,10 @@ def main():
     print("\n\n")
 
 
-    # A = load_matrix("./data/phonecalls.edgelist.txt")
-    A = load_matrix("./data/powergrid.edgelist.txt")
+    # A = load_matrix("./data/powergrid.edgelist.txt")
+    A = load_matrix("./data/internet.edgelist.txt")
     # A = load_matrix("./data/test.txt")
-    # A = generate_AB_graph_random(2018, 2018)
+    # A = generate_AB_graph(2018, 2018)
     # print(A.todense())
 
     plot_degree_distrib(A)

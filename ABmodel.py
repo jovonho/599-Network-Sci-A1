@@ -96,6 +96,7 @@ def plot_degree_distrib(A):
     fig.tight_layout()
     plt.show()
 
+# OUTDATED VERSION, use the other one
 # Complexity: O(n^2)
 def generate_AB_graph_random(n, m):
 
