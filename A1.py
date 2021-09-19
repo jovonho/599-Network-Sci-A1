@@ -112,33 +112,90 @@ def load_matrix(filename="./data/metabolic.edgelist.txt"):
 
     return A
 
+def drop_zeros(a_list):
+    return [i for i in a_list if i>0]
+
+def log_binning(counter_dict, bin_count=35):
+
+    max_x = np.log10(max(counter_dict.keys()))
+    max_y = np.log10(max(counter_dict.values()))
+    max_base = max([max_x,max_y])
+
+    min_x = np.log10(min(drop_zeros(counter_dict.keys())))
+
+    bins = np.logspace(min_x,max_base,num=bin_count)
+
+    # Based off of: http://stackoverflow.com/questions/6163334/binning-data-in-python-with-scipy-numpy
+    bin_means_y = (np.histogram(counter_dict.keys(),bins,weights=counter_dict.values())[0] / np.histogram(counter_dict.keys(),bins)[0])
+    bin_means_x = (np.histogram(counter_dict.keys(),bins,weights=counter_dict.keys())[0] / np.histogram(counter_dict.keys(),bins)[0])
+
+    return bin_means_x,bin_means_y
+
 
 
 def plot_degree_distrib(A):
 
     degrees = np.array([sum(line) for line in A.A])
     total_degree = sum(degrees)
+    print(f"\nTotal degree: {total_degree}")
+
+    N = A.shape[0]
+
 
     print(f"Degrees: {degrees}, len(degrees): {len(degrees)}")
-    print(f"Total degree: {total_degree}")
 
-
+    # Count the number of occurence of each degree
     counts = Counter(degrees)
-    # print(f"counts: {counts}")
-    print(f"counts[5]: {counts[5]}")
+    print(counts)
 
-    X, Y = list(counts.keys()), list(counts.values())
 
-    print(Y)
-    print(f"{X[4]}: {Y[4]}")
+    k, Nk = np.array(list(counts.keys())), np.array(list(counts.values()))
 
-    Y = Y / total_degree
+    print(f"k: {k}")
 
-    print(Y)
+    # Calculate pk by dividing the number of nodes of a degree by total number of nodes
+    pk = Nk / N
 
-    print(f"{X[4]}: {Y[4]}")
+    print(f"max k: {max(k)}")
+
+    print(f"pk {pk}")
+
+    # For log bins to be clean, the max needs to be a power of base and num needs to be 1 more than that
+    # This way, we will have bins spaced according to each power of base. E.g. [1, 10, 100, 1000]
+    stop = np.ceil(np.log10(max(k)))
+    bins = np.logspace(start=0, stop=stop, base=10, num=50)
+
+    print(bins)
+
+    # Need to bin values
+    digitized = np.digitize(k, bins)
+
+    print(f"digitized: {digitized}")
+
+    # From NS Book Section 4.12.3. When using log binning, p<kn> is given by 
+    # Nn/bn : (Number of nodes in bin n) / (size of bin n)
+
+    Nn_count = Counter(digitized)
+    print(f"Nn_count: {Nn_count}")
+
+    Nn = np.array(list(Nn_count.values()))
+
+    print(f"Nn: {Nn}")
+
+    bn = np.array(bins[1:] - bins[:-1])
+    print(f"Widths: {bn}\n")
+
+    pkn = Nn / bn
+    print(f"pkn: {pkn}")
+    print(f"len(k): {len(k)}")
+    print(f"len(pkn): {len(pkn)}")
     
 
+    # We don't calculate the bin size this way
+    # bin_means = [k[digitized == i].mean() for i in range(1, len(bins))]
+    # print(bin_means)
+
+    
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(13, 7))
 
     ax1.set_title("Raw Data")
@@ -148,7 +205,46 @@ def plot_degree_distrib(A):
     ax1.set_yscale('log', base=10)
     ax1.tick_params(which='both', direction="in")
 
-    ax1.scatter(X, Y)
+    ax1.scatter(k, pk)
+
+    ax2.set_title("Log Binned Data")
+    ax2.set_ylabel("P(k<n>)")
+    ax2.set_xlabel("k")
+    ax2.set_xscale('log', base=10)
+    ax2.set_yscale('log', base=10)
+    ax2.tick_params(which='both', direction="in")
+
+
+
+    ax2.scatter(k, pkn)
+
+    fig.tight_layout()
+    plt.show()
+
+    # degree_centrality = degrees / N
+    # import networkx
+    # testG = networkx.readwrite.edgelist.read_edgelist("./data/test.txt")
+    # ba_c = networkx.degree_centrality(testG)
+
+    # # To convert normalized degrees to raw degrees
+    # #ba_c = {k:int(v*(len(ba_g)-1)) for k,v in ba_c.iteritems()}
+    # ba_c2 = dict(Counter(ba_c.values()))
+
+    # print(degree_centrality)
+    # print(ba_c)
+
+    # ba_x,ba_y = log_binning(ba_c2,50)
+
+    # plt.xscale('log')
+    # plt.yscale('log')
+    # plt.scatter(ba_x,ba_y,c='r',marker='s',s=50)
+    # plt.scatter(ba_c2.keys(),ba_c2.values(),c='b',marker='x')
+    # plt.xlim((1e-4,1e-1))
+    # plt.ylim((.9,1e4))
+    # plt.xlabel('Connections (normalized)')
+    # plt.ylabel('Frequency')
+    # plt.show()
+
 
     # plt.show()
 
@@ -157,55 +253,6 @@ def plot_degree_distrib(A):
 
     # yfit = lambda x: np.power(10, fit(np.log10(x)))
     # ax1.plot(X, yfit(X))
-
-
-    # Log binning
-    bins = np.logspace(np.log10(min(X)), np.log10(max(X)))
-    print(f"Bins: {bins}\n")
-
-    widths = (bins[1:] - bins[:-1])
-    print(f"Widths: {widths}\n")
-
-    # Calculate histogram
-    hist = np.histogram(X, bins=bins, weights=Y)
-
-    x_hist = np.histogram(X, bins )
-    y_hist = np.histogram(X, bins)
-
-    print(f"X hist: {x_hist[0]}")
-    print(f"Y hist: {y_hist[0]}")  
-
-    x_hist_with_weights = np.histogram(X, bins, weights=X)
-    y_hist_with_weights = np.histogram(X, bins, weights=Y)
-
-    print(f"X hist w weights: {x_hist_with_weights[0]}")
-    print(f"Y hist w weights: {y_hist_with_weights[0]}")
-
-
-    x_bin_means = np.histogram(X, bins, weights=X)[0] / np.histogram(X, bins)[0]
-    y_bin_means = np.histogram(X, bins, weights=Y)[0] / np.histogram(X, bins)[0]
-
-    # print(f"Hist[0]:\n{hist[0]}\n")
-    print(f"x_bin_means:\n{x_bin_means}\n")
-    print(f"y_bin_means:\n{y_bin_means}\n")
-
-    # normalize by bin width
-    hist_norm = hist[0]/widths
-
-    # print(f"\nhist_norm:\n{hist_norm}")
-
-    ax2.set_title("Log Binned")
-    ax2.set_ylabel("P(k)")
-    ax2.set_xlabel("k")
-    ax2.set_xscale('log', base=10)
-    ax2.set_yscale('log', base=10)
-    ax2.tick_params(which='both', direction="in")
-
-    # ax2.scatter(x_bin_means, y_bin_means, c='r')
-    ax2.scatter(hist_norm, widths, c='r')
-    # ax2.plot(X, yfit(X))
-
-    plt.show()
 
 
 def get_degrees(graph):
@@ -296,8 +343,6 @@ def plot_shortest_paths(graph):
 
 
 
-
-
 def get_connected_compo(graph):
     t1 = time.time()
     con_comp, labels = sparse.csgraph.connected_components(graph, directed=False, return_labels=True)
@@ -316,7 +361,6 @@ def get_connected_compo(graph):
 
     t2 = time.time()    
     print(f"Time to get comnnected components: {t2-t1} s")
-
 
 
 
@@ -403,7 +447,6 @@ def get_degree_correl(graph):
     fig.tight_layout()
 
     plt.show()
-
 
 
 
