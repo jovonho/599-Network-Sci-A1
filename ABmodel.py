@@ -226,6 +226,7 @@ def generate_AB_graph_ensure_m_edges(n, m, save_to_file=False):
         log.debug(f"\tDegrees at time t={i}: {candidate_nodes}")
 
         while links_made < m:
+            log.info(f"linking node {i}")
 
             # Here we iterate over the existing nodes always in the same order
             for k, k_deg in candidate_nodes.items():   
@@ -264,7 +265,7 @@ def generate_AB_graph_ensure_m_edges(n, m, save_to_file=False):
                         log.debug(f"\t******All {m} links made for node {i}!!")
                         break
 
-            print(f"We've iterated through all the nodes. links made: {links_made} vs {m}")
+            log.debug(f"We've iterated through all the nodes. links made: {links_made} vs {m}")
 
             # if links_made < m:
             #     log.debug(f"\t*** No more candidate nodes. Links made for node {i}: {links_made}")
@@ -292,9 +293,9 @@ def generate_AB_graph_ensure_m_edges(n, m, save_to_file=False):
 
 def main():
 
-    # log.setLevel(logging.INFO)
+    log.setLevel(logging.INFO)
 
-    log.setLevel(logging.DEBUG)
+    # log.setLevel(logging.DEBUG)
 
     n=50
     m=2

@@ -15,7 +15,7 @@ from scipy.sparse import csgraph
 import seaborn as sns
 import math 
 
-from ABmodel import generate_AB_graph
+from ABmodel import generate_AB_graph, generate_AB_graph_ensure_m_edges
 
 from memory_profiler import profile
 
@@ -103,7 +103,7 @@ def load_matrix(filename="./data/metabolic.edgelist.txt"):
 
 
 
-def plot_degree_distrib(A):
+def a_plot_degree_distrib(A):
 
     degrees = get_degrees(A)
 
@@ -267,20 +267,13 @@ def get_degrees(graph):
 
 def get_clustering_coefs(graph, avg=False):
 
+    # TODO Remove this, just to check our results
     import networkx as nx 
 
     G = nx.from_scipy_sparse_matrix(graph)
     print(f"NX avg clustering of graph: {nx.average_clustering(G)}")
 
     t1 = time.time()
-
-    graph_diag = graph.diagonal()
-    print("graph_diag should be all zeros")
-    print(graph_diag)
-
-    L = csgraph.laplacian(graph)
-    print("L diagonal should be degrees")
-    print(L.diagonal())
     
     A3 = graph ** 3
 
@@ -292,9 +285,6 @@ def get_clustering_coefs(graph, avg=False):
     # clustering_coefs = [A3[i,i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
 
     A3_diag = A3.diagonal()
-
-    print("A3 diagonal = number triangles")
-    print(A3_diag)
 
     clustering_coefs = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(N)]
 
@@ -312,7 +302,7 @@ def get_clustering_coefs(graph, avg=False):
 
 # It does phonecalls in ~7min
 # About O(n3)
-def plot_shortest_paths(graph):
+def c_plot_shortest_paths(graph):
     t1 = time.time()
     # Saw the note in documentation about D possible conflict with directed=False 
     # but out graphs are always symmetric so should work fine.
@@ -362,7 +352,7 @@ def plot_shortest_paths(graph):
 
 
 
-def get_connected_compo(graph):
+def d_get_connected_compo(graph):
     t1 = time.time()
     con_comp, labels = sparse.csgraph.connected_components(graph, directed=False, return_labels=True)
     print(f"Number of Connected Components: {con_comp}")
@@ -587,20 +577,23 @@ def main():
 
     # A = load_matrix("./data/powergrid.edgelist.txt")
     # A = load_matrix("./data/collaboration.edgelist.txt")
-    # A = load_matrix("./data/metabolic.edgelist.txt")
+    A = load_matrix("./data/metabolic.edgelist.txt")
     # A = generate_AB_graph(2018, 10, save_to_file=True)
-    A = load_matrix("./data/AB_n2018_m2.edgelist.txt")
-    # print(A.todense())
+    # A = load_matrix("./data/AB_n2018_m2.edgelist.txt")
+    # A = generate_AB_graph_ensure_m_edges(2018, 2, save_to_file=True)
+    # A = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
 
-    # plot_degree_distrib(A)
+    a_plot_degree_distrib(A)
 
     b_plot_clustering_coef_distrib(A)
 
+    c_plot_shortest_paths(A)
+
+
     exit()
 
-    # plot_shortest_paths(A)
 
-    # get_connected_compo(A)
+    d_get_connected_compo(A)
 
     # get_degree_correl(A)
 
