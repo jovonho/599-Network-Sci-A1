@@ -4,7 +4,6 @@ from os import link
 from scipy import sparse
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix, csc_matrix
-from A1 import plot_degree_distrib
 import time
 import logging
 from logging import handlers

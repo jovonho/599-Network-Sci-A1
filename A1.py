@@ -41,7 +41,7 @@ def make_symmetric(edgelist):
     
     print(f"\nNumber edges before removing (i, j) (j, i) pairs {len(edgelist)}")
 
-    # O(E) time, O(E^2) space
+    # O(E) time, O(E) space
     # edgelist = list(set(frozenset(edge) for edge in edgelist if edge[0] != edge[1]))
     edgelist = [frozenset(edge) for edge in edgelist if edge[0] != edge[1]]
 
@@ -111,28 +111,7 @@ def load_matrix(filename="./data/metabolic.edgelist.txt"):
     t2 = time.time()
     print(f"Time to load the graph: {t2-t1} s")
 
-    # sanity_check(A)
-
     return A
-
-def drop_zeros(a_list):
-    return [i for i in a_list if i>0]
-
-def log_binning(counter_dict, bin_count=35):
-
-    max_x = np.log10(max(counter_dict.keys()))
-    max_y = np.log10(max(counter_dict.values()))
-    max_base = max([max_x,max_y])
-
-    min_x = np.log10(min(drop_zeros(counter_dict.keys())))
-
-    bins = np.logspace(min_x,max_base,num=bin_count)
-
-    # Based off of: http://stackoverflow.com/questions/6163334/binning-data-in-python-with-scipy-numpy
-    bin_means_y = (np.histogram(counter_dict.keys(),bins,weights=counter_dict.values())[0] / np.histogram(counter_dict.keys(),bins)[0])
-    bin_means_x = (np.histogram(counter_dict.keys(),bins,weights=counter_dict.keys())[0] / np.histogram(counter_dict.keys(),bins)[0])
-
-    return bin_means_x,bin_means_y
 
 
 
@@ -144,7 +123,6 @@ def plot_degree_distrib(A):
     print(f"\nTotal degree: {total_degree}")
 
     N = A.shape[0]
-
 
     print(f"Degrees: {degrees}, len(degrees): {len(degrees)}")
 
@@ -183,7 +161,6 @@ def plot_degree_distrib(A):
     # digitized = np.digitize([10,3,56,2,3,1,1,1,1,5,7], [1,2,4,8]) - 1
 
     print(f"digitized: {digitized}")
-
 
 
     bin_counts = Counter(digitized)
@@ -239,7 +216,7 @@ def plot_degree_distrib(A):
     ax1.scatter(k, pk)
 
     ax2.set_title("Log Binned Data")
-    ax2.set_ylabel("P(k<n>)")
+    ax2.set_ylabel("P(k)")
     ax2.set_xlabel("k")
     ax2.set_xscale('log', base=10)
     ax2.set_yscale('log', base=10)
@@ -281,17 +258,11 @@ def get_clustering_coefs(graph, avg=False):
     n = A3.shape[0]
 
     #Note: accessing by index is slow
-
-    clustering_coefs = [A3[i,i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
+    # clustering_coefs = [A3[i,i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
 
     A3_diag = A3.diagonal()
-    print(A3_diag)
+    clustering_coefs = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
 
-    clustering_coefs2 = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
-
-    print(f"If method2 == method1? {clustering_coefs == clustering_coefs2}")
-
-    # print(f"clustering coefs: {clustering_coefs}")
     t2 = time.time()
 
     print(f"Time to get clustering coefs: {t2-t1} s")
@@ -383,23 +354,10 @@ def get_degree_correl(graph):
     X = []
     Y = []
 
-    # O(n2)
-    # Efficient row slicing with CSR
-    for i in range(n):
-        row = graph[i,:].toarray()[0]
-        # print(f"Row {i}: {row}")
-        
-        for j in range(n):
-            if row[j] == 1:
-                # print(f"Node {i} links to node {j}")
-                X.append(degs[i])
-                Y.append(degs[j])
-
-
     # # O(n2)
     # # Efficient row slicing with CSR
     # for i in range(n):
-    #     row = graph.getrow(i).toarray()[0]
+    #     row = graph[i,:].toarray()[0]
     #     # print(f"Row {i}: {row}")
         
     #     for j in range(n):
@@ -409,7 +367,19 @@ def get_degree_correl(graph):
     #             Y.append(degs[j])
 
 
-    dataset = pd.DataFrame({'di': X, 'dj': Y}, columns=['di', 'dj'])
+    # O(n2)
+    # Efficient row slicing with CSR
+    for i in range(n):
+        row = graph.getrow(i).toarray()[0]
+        # print(f"Row {i}: {row}")
+        
+        for j in range(n):
+            if row[j] == 1:
+                # print(f"Node {i} links to node {j}")
+                X.append(degs[i])
+                Y.append(degs[j])
+
+
 
     t2 = time.time()    
     print(f"Time to calculate degree correlations: {t2-t1} s")
@@ -422,19 +392,8 @@ def get_degree_correl(graph):
     print(f"slope {slope}")
     print(f"intercept {intercept}")
 
-    # m, b = np.polyfit(X, Y, 1)
-    # print(f"m {m}")
-    # print(f"b {b}")
 
-    fig, ax = plt.subplots()
-    ax.set_title("Degree Correlation")
-    ax.set_xlabel("di")
-
-    ax.set_ylabel("dj")
-
-    planets = sns.load_dataset('planets')
-
-    print(planets)
+    dataset = pd.DataFrame({'di': X, 'dj': Y}, columns=['di', 'dj'])
 
     # Should be length 2L * 2
     print(dataset.shape)
@@ -443,6 +402,13 @@ def get_degree_correl(graph):
     print(f"Max X: {max(X)}")
     print(f"Max Y: {max(Y)}")
 
+    print(f"Size of X: {len(X)}")
+    print(f"Size of Y: {len(Y)}")
+
+    fig, ax = plt.subplots()
+    ax.set_title("Degree Correlation")
+    ax.set_xlabel("di")
+    ax.set_ylabel("dj")
 
     # Create empty plot with blank marker containing the extra label
     R = "{:.2f}".format(r_value)
@@ -451,7 +417,6 @@ def get_degree_correl(graph):
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
 
-    # ax.scatter(X, Y, color='purple', s=1 )
     sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), cbar=True)
 
     ax.legend() 
@@ -536,7 +501,7 @@ def eigenval_distrib(graph):
 
     ax2.set_title("Eigenvalue Distribution of Laplacian Matrix")
     ax2.set_xlabel("Eigenvalue")
-    ax2.set_ylabel("Density")
+    ax2.set_ylabel("Density")   
 
     ax2.grid(True, which='both', linestyle='--')
     ax2.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
@@ -550,6 +515,9 @@ def eigenval_distrib(graph):
 def g_plot_clustering_degree_rel(A):
 
     cc, d = get_clustering_coefs(A)
+
+    print(f"Size of CC: {len(cc)}")
+    print(f"Size of degrees: {len(d)}")
 
     fig, ax = plt.subplots(figsize=(13, 7))
 
@@ -565,10 +533,9 @@ def g_plot_clustering_degree_rel(A):
 
     dataset = pd.DataFrame({'clust_coef': cc, 'degree': d}, columns=['clust_coef', 'degree'])
 
-    sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), cbar=True)
+    sns.histplot(data=dataset, x="clust_coef", y="degree", discrete=(True, True), cbar=True)
 
     fig.tight_layout()
-
     plt.show()
 
 
@@ -578,9 +545,8 @@ def main():
 
     print("\n\n")
 
-
     # A = load_matrix("./data/powergrid.edgelist.txt")
-    A = load_matrix("./data/internet.edgelist.txt")
+    A = load_matrix("./data/collaboration.edgelist.txt")
     # A = load_matrix("./data/test.txt")
     # A = generate_AB_graph(2018, 2018)
     # print(A.todense())
@@ -591,17 +557,16 @@ def main():
 
     # get_connected_compo(A)
 
-    # get_degree_correl(A)
+    get_degree_correl(A)
 
     # eigenval_distrib(A)
 
     # b_plot_clustering_coef_distrib(A)
 
-    # g_plot_clustering_degree_rel(A)
+    g_plot_clustering_degree_rel(A)
 
     t2 = time.time()
     print(f"Total running time: {t2-t1} s")
-
 
     print("\n\n\n")
 
