@@ -11,9 +11,11 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 from numpy.polynomial import Polynomial
 import time
+from scipy.sparse import csgraph
 import seaborn as sns
 import math 
 
+from ABmodel import generate_AB_graph
 
 from memory_profiler import profile
 
@@ -42,21 +44,13 @@ def make_symmetric(edgelist):
     print(f"\nNumber edges before removing (i, j) (j, i) pairs {len(edgelist)}")
 
     # O(E) time, O(E) space
-    # edgelist = list(set(frozenset(edge) for edge in edgelist if edge[0] != edge[1]))
+
     edgelist = [frozenset(edge) for edge in edgelist if edge[0] != edge[1]]
-
     edgelist = set(edgelist)
-
     edgelist = list(edgelist)
-
-    # Complexity?
-    # This will remove one of each symmetric edge of form (i, j), (j, i)
-    # edgelist = list(set(edgelist))
-    # print(edgelist)
-
     edgelist = np.array([list(edge) for edge in edgelist])
 
-    print(f"Number edges after removing (i, j) (j, i) pairs {len(edgelist)}")
+    print(f"Number edges after removing (i, j) (j, i) pairs {len(edgelist)}\n")
 
     return edgelist
 
@@ -79,11 +73,6 @@ def sanity_check(graph, details=False):
         print(f"A.nnz - ((A + A.T).nnz - (A - A.T).nnz): {A.nnz - d} (should give number of non-zero non-symmetric cells in A)")
 
 
-def make_symmetric2(graph):
-    A = graph.toarray()
-    A = np.maximum(A, A.transpose())
-    return sparse.csr_matrix(A)
-
 
 def load_matrix(filename="./data/metabolic.edgelist.txt"):
     t1 = time.time()
@@ -104,7 +93,6 @@ def load_matrix(filename="./data/metabolic.edgelist.txt"):
     # TODO: Complexity?
     A = graph + graph.T
 
-
     print(f"A nnz: {A.nnz}")
     print(f"A shape: {A.shape}")
     
@@ -121,32 +109,46 @@ def plot_degree_distrib(A):
 
     total_degree = sum(degrees)
     print(f"\nTotal degree: {total_degree}")
+    print(f"Average degree: {total_degree / A.shape[0]}")
 
     N = A.shape[0]
 
-    print(f"Degrees: {degrees}, len(degrees): {len(degrees)}")
+    # print(f"Degrees: {degrees}, len(degrees): {len(degrees)}")
 
     # Count the number of occurence of each degree
     counts = Counter(degrees)
     print(counts)
 
 
-    k, Nk = np.array(list(counts.keys())), np.array(list(counts.values()))
+    k, Nk = list(counts.keys()), np.array(list(counts.values()))
 
-    print(f"k: {k}")
 
     # Calculate pk by dividing the number of nodes of a degree by total number of nodes
-    pk = Nk / N
+    pk = list(Nk / N)
 
     print(f"max k: {max(k)}")
+    print(f"k\n{k}")
+    print(f"pk\n{pk}")
 
-    print(f"pk {pk}")
+    #clean up k and pk
+    k_copy = k.copy()
+    pk_copy = pk.copy()
 
+    for i in range(0, len(k_copy)):
+        if math.isnan(k_copy[i]) or k_copy[i] == 0:
+            k.remove(k_copy[i])
+            pk.remove(pk_copy[i])
+
+    k = np.array(k)
+
+    print(f"k\n{k}")
+    print(f"pk\n{pk}")
 
     stop = np.ceil(np.log10(max(k)))
 
+    # TODO: Change the num_bins on a per graph basis
     # This is a dark art, too many bins and the first few contain no nodes 
-    num_bins = int(stop) * 15
+    num_bins = int(stop) * 7
     
     print(f"Num bins: {num_bins}")
     bins = np.logspace(start=0, stop=stop, base=10, num=num_bins, endpoint=True)
@@ -156,7 +158,7 @@ def plot_degree_distrib(A):
     print(f"Bins: {bins}")
 
     # Subtract 1 to get 0-based indices
-    digitized = np.digitize(degrees, bins) - 1
+    digitized = np.digitize(degrees, bins)
 
     # digitized = np.digitize([10,3,56,2,3,1,1,1,1,5,7], [1,2,4,8]) - 1
 
@@ -185,14 +187,24 @@ def plot_degree_distrib(A):
 
     print(f"Bin widths: {bn}\n")
 
+
+    # THIS IS WEIRD
     # From NS Book Section 4.12.3. When using log binning, p<kn> is given by 
     # Nn/bn : (Number of nodes in bin n) / (size of bin n)
-
+    # However, dividing only by the size of the bin can give values > 0. 
+    # E.g. For a bin of size=2 capturing nodes of degree 1 and 2 if there are > 2 nodes in it...
+    #
+    # NI book Section 10.4.1 does not give an explicit formula but says "We have to be careful to 
+    # normalize each bin by its width". Thus it seems we have to still divide by N, while also 
+    # correcting for bin size.
     pkn = np.array(Nn) / bn
     pkn = list(pkn / N)
 
+
     # Average degree of nodes in each bin
     kn = [degrees[digitized == i].mean() for i in range(0, len(bins))]
+
+
 
     #clean up kn and pkn
     kn_copy = kn.copy()
@@ -203,8 +215,14 @@ def plot_degree_distrib(A):
             kn.remove(kn_copy[i])
             pkn.remove(pkn_copy[i])
 
+
+    print("kn")
+    print(kn)
+    print("pkn")
+    print(pkn)
     
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(13, 7))
+    # fig, ax2 = plt.subplots(nrows=1, ncols=1, figsize=(8, 7))
 
     ax1.set_title("Raw Data")
     ax1.set_ylabel("P(k)")
@@ -223,7 +241,6 @@ def plot_degree_distrib(A):
     ax2.tick_params(which='both', direction="in")
 
     ax2.scatter(kn, pkn)
-
 
     fit1 = Polynomial.fit(np.log10(k), np.log10(pk), deg=1)
     print(f"Fit1: {fit1.coef}")
@@ -249,7 +266,21 @@ def get_degrees(graph):
 
 
 def get_clustering_coefs(graph, avg=False):
+
+    import networkx as nx 
+
+    G = nx.from_scipy_sparse_matrix(graph)
+    print(f"NX avg clustering of graph: {nx.average_clustering(G)}")
+
     t1 = time.time()
+
+    graph_diag = graph.diagonal()
+    print("graph_diag should be all zeros")
+    print(graph_diag)
+
+    L = csgraph.laplacian(graph)
+    print("L diagonal should be degrees")
+    print(L.diagonal())
     
     A3 = graph ** 3
 
@@ -261,7 +292,13 @@ def get_clustering_coefs(graph, avg=False):
     # clustering_coefs = [A3[i,i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
 
     A3_diag = A3.diagonal()
+
+    print("A3 diagonal = number triangles")
+    print(A3_diag)
+
     clustering_coefs = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(N)]
+
+    clustering_coefs = np.array(clustering_coefs, dtype=np.float32)
 
     t2 = time.time()
 
@@ -354,19 +391,6 @@ def get_degree_correl(graph):
     X = []
     Y = []
 
-    # # O(n2)
-    # # Efficient row slicing with CSR
-    # for i in range(n):
-    #     row = graph[i,:].toarray()[0]
-    #     # print(f"Row {i}: {row}")
-        
-    #     for j in range(n):
-    #         if row[j] == 1:
-    #             # print(f"Node {i} links to node {j}")
-    #             X.append(degs[i])
-    #             Y.append(degs[j])
-
-
     # O(n2)
     # Efficient row slicing with CSR
     for i in range(n):
@@ -396,11 +420,11 @@ def get_degree_correl(graph):
     dataset = pd.DataFrame({'di': X, 'dj': Y}, columns=['di', 'dj'])
 
     # Should be length 2L * 2
-    print(dataset.shape)
     print(dataset)
+    print(dataset.shape)
 
-    print(f"Max X: {max(X)}")
-    print(f"Max Y: {max(Y)}")
+    # print(f"Max X: {max(X)}")
+    # print(f"Max Y: {max(Y)}")
 
     print(f"Size of X: {len(X)}")
     print(f"Size of Y: {len(Y)}")
@@ -425,7 +449,6 @@ def get_degree_correl(graph):
     plt.show()
 
 
-
 def b_plot_clustering_coef_distrib(A):
     cc, _, avg_cc = get_clustering_coefs(A, avg=True)
 
@@ -433,17 +456,12 @@ def b_plot_clustering_coef_distrib(A):
 
     counts = Counter(cc)
 
-    X, Y = list(counts.keys()), list(counts.values())
-
-    bins = np.linspace(min(X), max(X), num=100)
-
-    y_bins = np.linspace(min(Y), max(Y), num=10)
+    print(counts)
 
     fig, ax = plt.subplots(figsize=(13, 7))
 
 
-
-    ax.set_title("Metabolic: Clustering Coef Distribution")
+    ax.set_title("Clustering Coef Distribution")
     ax.set_xlabel("Local Clustering Coefficient")
     ax.set_ylabel("Density")
 
@@ -524,20 +542,42 @@ def g_plot_clustering_degree_rel(A):
     ax.set_title("Clustering Coef vs Degree")
     ax.set_xlabel("Local Clustering Coefficient")
     ax.set_ylabel("Degree")
-    ax.set_xscale('log', base=10)
-    ax.set_yscale('log', base=10)
+    # ax.set_xscale('log', base=10)
+    # ax.set_yscale('log', base=10)
 
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
     # ax.scatter(cc, d, c='purple')
 
-    dataset = pd.DataFrame({'clust_coef': cc, 'degree': d}, columns=['clust_coef', 'degree'])
+    dataset = pd.DataFrame({'cc': cc, 'd': d}, columns=['cc', 'd'])
 
-    sns.histplot(data=dataset, x="clust_coef", y="degree", discrete=(True, True), cbar=True)
+    # cc_finite = dataset[np.isfinite(dataset['cc'])]
+    # d_finite = dataset[np.isfinite(dataset)]
 
-    fig.tight_layout()
+    # print(d_finite)
+    # print(d_finite.shape)
+
+    # print(np.argwhere(cc == float("nan")))
+    # print(np.argwhere(cc == float("inf")))
+    # print(np.argwhere(cc == float("-inf")))
+    # print(np.argwhere(d == float("nan")))
+    # print(np.argwhere(d == float("inf")))
+    # print(np.argwhere(d == float("-inf")))
+
+    print(f"CC: max: {max(cc)}, min: {min(cc)}")
+    print(f"d: max: {max(d)}, min: {min(d)}")
+
+    num_bins = 100
+    x_bins = np.linspace(min(cc), max(cc), num=num_bins)
+    y_bins = np.linspace(min(d), max(d), num=num_bins)
+
+    print(f"x binx: {x_bins}")
+    print(f"y binx: {y_bins}")
+
+    sns.histplot(data=dataset, x="cc", y="d", bins=(x_bins, y_bins), cbar=True, ax=ax)
+
+    # fig.tight_layout()
     plt.show()
-
 
 
 def main():
@@ -546,22 +586,26 @@ def main():
     print("\n\n")
 
     # A = load_matrix("./data/powergrid.edgelist.txt")
-    A = load_matrix("./data/collaboration.edgelist.txt")
-    # A = load_matrix("./data/test.txt")
-    # A = generate_AB_graph(2018, 2018)
+    # A = load_matrix("./data/collaboration.edgelist.txt")
+    # A = load_matrix("./data/metabolic.edgelist.txt")
+    # A = generate_AB_graph(2018, 10, save_to_file=True)
+    A = load_matrix("./data/AB_n2018_m2.edgelist.txt")
     # print(A.todense())
 
-    plot_degree_distrib(A)
+    # plot_degree_distrib(A)
+
+    b_plot_clustering_coef_distrib(A)
+
+    exit()
 
     # plot_shortest_paths(A)
 
     # get_connected_compo(A)
 
-    get_degree_correl(A)
+    # get_degree_correl(A)
 
     # eigenval_distrib(A)
 
-    # b_plot_clustering_coef_distrib(A)
 
     g_plot_clustering_degree_rel(A)
 

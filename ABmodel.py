@@ -71,7 +71,17 @@ def compare_degree_distrib(A1, A2):
 
 # No binning, just raw data
 def plot_degree_distrib(A):
-    degrees1 = np.array([sum(line) for line in A.A])
+
+    # degrees1 = np.array([sum(line) for line in A.A])
+
+    degrees1 = []
+    for i in range(A.shape[0]):
+        row = A.getrow(i)
+        row = row.toarray()[0]
+        print(f"Node {i} has degree: {sum(row)}")
+        degrees1.append(sum(row))
+
+
     total_degree1 = sum(degrees1)
 
     print(f"Degrees: {degrees1}, len(degrees): {len(degrees1)}")
@@ -95,96 +105,9 @@ def plot_degree_distrib(A):
     fig.tight_layout()
     plt.show()
 
-# OUTDATED VERSION, use the other one
-# Complexity: O(n^2)
-def generate_AB_graph_random(n, m):
-
-    # Initialize our data structures
-
-    # These list are in COO format, where an Matrix(row[i], col[i]) = 1 if there is a link 
-    # We want our graph to be undirected so we insert edges in both directions.
-    row = [0,1]
-    col = [1,0]
-
-    # This dictionary will keep track of the degrees of each nodes
-    nodes = {
-        0: 1,
-        1: 1
-    }
-
-    total_degree = 2
-
-    for i in range(2, n):
-
-        # Copy the dictionary items, since we can't modify it while iterating
-        nodes_t = nodes.copy()
-        node_keys_t = list(nodes_t.keys())
-        total_degree_at_t = total_degree
-        links_made = 0
-
-        log.debug(f"Adding new node {i}")
-        log.debug(f"\tDegrees at time t={i}: {nodes_t}")
-
-        while links_made < m:
-
-            # Break if no more candidate nodes
-            if len(node_keys_t) == 0:
-                log.debug(f"\t*** No more candidate nodes. Links made for node {i}: {links_made}")
-                break
-
-            # Randomly choose a candidate node k, removing it from the list of candidates
-            # Note: since i is not in the existing node, no self-links can be created
-            k = np.random.choice(node_keys_t)
-            node_keys_t.remove(k)
-
-            log.debug(f"\tRandomly picked node {k}") 
-
-            # Get the degrees of node k
-            k_deg = nodes_t[k]
-
-            # Compute the probability of linking node k to i
-            p = k_deg / total_degree_at_t
-            log.debug(f"\tProb of linking node {k} to {i}: {p}")
-
-            make_link = np.random.choice([0,1], p = [(1-p), p])
-
-            if make_link:
-                links_made += 1
-
-                log.debug(f"\t*** Nodes {k} and {i} linked!")
-
-                if links_made == m:
-                    log.debug(f"\t******All {m} links made for node {i}!!")
-
-                # Add the new link to the row and col lists
-                # We add the link in both directions (k, i) and (i, k) so the matrix will be symmetric
-                row.extend([k, i])
-                col.extend([i, k])
-
-                # Increment the degrees of each node in the dictionary to use it when adding the next node
-                if i in nodes:
-                    nodes[i] += 1
-                else:
-                    nodes[i] = 1
-
-                nodes[k] += 1
-
-                # Total degree increases by 2, since we add symmetric links
-                total_degree += 2
-
-
-    # Data will be all ones
-    nnz = len(row)    
-    data = np.ones(nnz)
-
-    # Generate the sparse matrix only at the end, from the coordinate lists
-    graph = coo_matrix((data, (row, col)),  shape=(n, n), dtype=np.int32)
-
-    return graph.tocsr()
-
 
 # Complexity: O(n^2) but much quicker than randomly picking candidates in practice
-def generate_AB_graph(n, m):
+def generate_AB_graph(n, m, save_to_file=False):
 
     # Initialize our data structures
 
@@ -216,7 +139,7 @@ def generate_AB_graph(n, m):
         # Here we iterate over the existing nodes always in the same order
         for k, k_deg in candidate_nodes.items():   
             
-            log.debug(f"\Trying to link node {k}") 
+            log.debug(f"\tTrying to link node {k}") 
 
             # Compute the probability of linking node k to i
             p = k_deg / total_degree_at_t
@@ -229,9 +152,6 @@ def generate_AB_graph(n, m):
 
                 log.debug(f"\t*** Nodes {k} and {i} linked!")
 
-                if links_made == m:
-                    log.debug(f"\t******All {m} links made for node {i}!!")
-                    break
 
                 # Add the new link to the row and col lists
                 # We add the link in both directions (k, i) and (i, k) so the matrix will be symmetric
@@ -249,6 +169,10 @@ def generate_AB_graph(n, m):
                 # Total degree increases by 2, since we add symmetric links
                 total_degree += 2
 
+                if links_made == m:
+                    log.debug(f"\t******All {m} links made for node {i}!!")
+                    break
+
         if links_made < m:
             log.debug(f"\t*** No more candidate nodes. Links made for node {i}: {links_made}")
 
@@ -256,8 +180,16 @@ def generate_AB_graph(n, m):
     nnz = len(row)    
     data = np.ones(nnz)
 
+    if save_to_file:
+        with open(f"./data/AB_n{n}_m{m}.edgelist.txt", "w") as outfile:
+            for i in range(0, n):
+                outfile.write(f"{row[i]}\t{col[i]}\n")
+            outfile.write("\n")
+
+
     # Generate the sparse matrix only at the end, from the coordinate lists
     graph = coo_matrix((data, (row, col)),  shape=(n, n), dtype=np.int32)
+
 
     return graph.tocsr()
 
@@ -266,25 +198,29 @@ def main():
 
     log.setLevel(logging.INFO)
 
-    # UNCOMMENT for more logging    
     # log.setLevel(logging.DEBUG)
 
-    n=3000
+    n=50
     m=2
 
-    # t1 = time.time()
-    # graph1 = generate_AB_graph_random(n=n, m=m)
-    # t2 = time.time()
-    # print(f"Time to generate AB model(n={n}, m={m}) with version 1: {t2-t1} s")
 
     t1 = time.time()
-    graph2 = generate_AB_graph(n=n, m=m)
+    graph = generate_AB_graph(n=n, m=m, save_to_file=True)
     t2 = time.time()
     print(f"Time to generate AB model(n={n}, m={m}) with version 2: {t2-t1} s")
 
     # compare_degree_distrib(graph1, graph2)
 
-    plot_degree_distrib(graph2)
+    print(f"Shape of graph: {graph.shape}")
+    print(f"Graph nnz: {graph.nnz}")
+
+    print(graph.A)
+
+    A_minus_AT = graph - graph.T  
+
+    print(f"\nIs A symmetric? (Is A - A.T all zeros?): {A_minus_AT.nnz == 0}")
+
+    plot_degree_distrib(graph)
 
 
 if __name__=='__main__':
