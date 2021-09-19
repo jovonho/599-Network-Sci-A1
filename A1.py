@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from numpy.polynomial import Polynomial
 import time
 import seaborn as sns
+import ABmodel
 
 from memory_profiler import profile
 
@@ -455,8 +456,8 @@ def eigenval_distrib(graph):
     L = sparse.csgraph.laplacian(graph)
 
     # Need to use float
-    eigenvals = sparse.linalg.eigsh(graph.asfptype(), k=graph.shape[0]-1, return_eigenvectors=False)
-    eigenvals_L = sparse.linalg.eigsh(L.asfptype(), k=L.shape[0]-1, return_eigenvectors=False)
+    eigenvals = sparse.linalg.eigsh(graph.asfptype(), k=graph.shape[0]-1, return_eigenvectors=False, which = 'SM')
+    eigenvals_L = sparse.linalg.eigsh(L.asfptype(), k=L.shape[0]-1, return_eigenvectors=False, which = 'SM')
 
     t2 = time.time()    
     print(f"Time to gt Eigenvals: {t2-t1} s")
@@ -522,6 +523,7 @@ def main():
     # A = load_matrix("./data/phonecalls.edgelist.txt")
     A = load_matrix("./data/powergrid.edgelist.txt")
     # A = load_matrix("./data/test.txt")
+    # A = generate_AB_graph_random(2018, 2018)
     # print(A.todense())
 
     plot_degree_distrib(A)
