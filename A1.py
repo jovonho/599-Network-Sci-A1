@@ -255,20 +255,20 @@ def get_clustering_coefs(graph, avg=False):
 
     deg = get_degrees(graph)
 
-    n = A3.shape[0]
+    N = A3.shape[0]
 
-    #Note: accessing by index is slow
+    #Note: accessing a sparse matrix by index is slow
     # clustering_coefs = [A3[i,i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
 
     A3_diag = A3.diagonal()
-    clustering_coefs = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
+    clustering_coefs = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(N)]
 
     t2 = time.time()
 
     print(f"Time to get clustering coefs: {t2-t1} s")
 
     if avg:
-        return clustering_coefs, deg, sum(clustering_coefs) / sum(deg)
+        return clustering_coefs, deg, sum(clustering_coefs) / N
 
     return clustering_coefs, deg
     
