@@ -413,23 +413,20 @@ def get_degree_correl(graph):
     # correl = np.corrcoef(X, Y)
     # print(f"Correl {correl}")
 
+    # Correct way to compute the R value is given in NI book, Section 7.7.2
+
     slope, intercept, r_value, p_value, std_err = stats.linregress(X, Y)
-    print(f"R2 {r_value}")
-    print(f"slope {slope}")
-    print(f"intercept {intercept}")
+    print(f"R value {r_value}")
+
+    import networkx
+
+    G = networkx.from_scipy_sparse_matrix(graph)
+    r_value = networkx.algorithms.assortativity.degree_pearson_correlation_coefficient(G)
+    print(f"R value from nx {r_value}")
 
 
     dataset = pd.DataFrame({'di': X, 'dj': Y}, columns=['di', 'dj'])
 
-    # Should be length 2L * 2
-    print(dataset)
-    print(dataset.shape)
-
-    # print(f"Max X: {max(X)}")
-    # print(f"Max Y: {max(Y)}")
-
-    print(f"Size of X: {len(X)}")
-    print(f"Size of Y: {len(Y)}")
 
     fig, ax = plt.subplots()
     ax.set_title("Degree Correlation between nodes i and j")
@@ -449,6 +446,9 @@ def get_degree_correl(graph):
     density = [100 * c[(xx,yy)] for xx,yy in zip(X,Y)]
 
     ax.scatter(X, Y, s=1, c=density, cmap='gist_yarg', norm=colors.LogNorm(vmin=1, vmax=max(density)/1.5))
+
+    # Old version, showed less detail
+    # sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), binwidth=50, cbar=True, ax=ax)
 
     ax.legend() 
     fig.tight_layout()
@@ -548,41 +548,19 @@ def g_plot_clustering_degree_rel(A):
     ax.set_title("Clustering Coef vs Degree")
     ax.set_xlabel("Local Clustering Coefficient")
     ax.set_ylabel("Degree")
-    # ax.set_xscale('log', base=10)
-    # ax.set_yscale('log', base=10)
+    ax.set_xscale('log', base=10)
+    ax.set_yscale('log', base=10)
 
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-    # ax.scatter(cc, d, c='purple')
 
-    dataset = pd.DataFrame({'cc': cc, 'd': d}, columns=['cc', 'd'])
+    # Get the point density to change color based on counts
+    c = Counter(zip(cc,d))
+    density = [100 * c[(xx,yy)] for xx,yy in zip(cc,d)]
 
-    # cc_finite = dataset[np.isfinite(dataset['cc'])]
-    # d_finite = dataset[np.isfinite(dataset)]
+    ax.scatter(cc, d, c=density, cmap='gist_yarg', norm=colors.LogNorm(vmin=1, vmax=max(density)/1.5))
 
-    # print(d_finite)
-    # print(d_finite.shape)
-
-    # print(np.argwhere(cc == float("nan")))
-    # print(np.argwhere(cc == float("inf")))
-    # print(np.argwhere(cc == float("-inf")))
-    # print(np.argwhere(d == float("nan")))
-    # print(np.argwhere(d == float("inf")))
-    # print(np.argwhere(d == float("-inf")))
-
-    print(f"CC: max: {max(cc)}, min: {min(cc)}")
-    print(f"d: max: {max(d)}, min: {min(d)}")
-
-    num_bins = 100
-    x_bins = np.linspace(min(cc), max(cc), num=num_bins)
-    y_bins = np.linspace(min(d), max(d), num=num_bins)
-
-    print(f"x binx: {x_bins}")
-    print(f"y binx: {y_bins}")
-
-    sns.histplot(data=dataset, x="cc", y="d", bins=(x_bins, y_bins), cbar=True, ax=ax)
-
-    # fig.tight_layout()
+    fig.tight_layout()
     plt.show()
 
 
@@ -593,11 +571,11 @@ def main():
 
     # A = load_matrix("./data/powergrid.edgelist.txt")
     # A = load_matrix("./data/collaboration.edgelist.txt")
-    A = load_matrix("./data/metabolic.edgelist.txt")
+    # A = load_matrix("./data/metabolic.edgelist.txt")
     # A = generate_AB_graph(2018, 10, save_to_file=True)
     # A = load_matrix("./data/AB_n2018_m2.edgelist.txt")
     # A = generate_AB_graph_ensure_m_edges(2018, 2, save_to_file=True)
-    # A = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
+    A = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
 
     # a_plot_degree_distrib(A)
 
@@ -606,7 +584,9 @@ def main():
     # c_plot_shortest_paths(A)
 
 
-    get_degree_correl(A)
+    # get_degree_correl(A)
+
+    g_plot_clustering_degree_rel(A)
 
     exit()
 
@@ -617,7 +597,6 @@ def main():
     # eigenval_distrib(A)
 
 
-    g_plot_clustering_degree_rel(A)
 
     t2 = time.time()
     print(f"Total running time: {t2-t1} s")
