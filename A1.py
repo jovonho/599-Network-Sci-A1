@@ -3,12 +3,14 @@ from math import isnan
 from os import altsep
 from typing import Counter
 from matplotlib import lines
+from networkx.algorithms.bipartite.basic import color
 import numpy as np
-from numpy.core.fromnumeric import size
+from numpy.core.fromnumeric import size, sort
 import scipy as sp
 from scipy import sparse, linalg, stats
 import pandas as pd
 import matplotlib.pyplot as plt 
+import matplotlib.colors as colors
 from numpy.polynomial import Polynomial
 import time
 from scipy.sparse import csgraph
@@ -303,6 +305,15 @@ def get_clustering_coefs(graph, avg=False):
 # It does phonecalls in ~7min
 # About O(n3)
 def c_plot_shortest_paths(graph):
+
+    # TODO Remove this, just to check our results
+    import networkx as nx 
+
+    G = nx.from_scipy_sparse_matrix(graph)
+    nx_sps = nx.shortest_path_length(G)
+
+
+
     t1 = time.time()
     # Saw the note in documentation about D possible conflict with directed=False 
     # but out graphs are always symmetric so should work fine.
@@ -311,6 +322,7 @@ def c_plot_shortest_paths(graph):
     # TODO Find out which one is fastest
     shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False)
 
+    # Only need 
     # Can give memory error with large graphs
     shortest_paths = sparse.triu(shortest_paths)
 
@@ -420,9 +432,9 @@ def get_degree_correl(graph):
     print(f"Size of Y: {len(Y)}")
 
     fig, ax = plt.subplots()
-    ax.set_title("Degree Correlation")
-    ax.set_xlabel("di")
-    ax.set_ylabel("dj")
+    ax.set_title("Degree Correlation between nodes i and j")
+    ax.set_xlabel("degree of node i")
+    ax.set_ylabel("degree of node j")
 
     # Create empty plot with blank marker containing the extra label
     R = "{:.2f}".format(r_value)
@@ -431,11 +443,15 @@ def get_degree_correl(graph):
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
 
-    sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), cbar=True)
+
+    # Get the point density
+    c = Counter(zip(X,Y))
+    density = [100 * c[(xx,yy)] for xx,yy in zip(X,Y)]
+
+    ax.scatter(X, Y, s=1, c=density, cmap='gist_yarg', norm=colors.LogNorm(vmin=1, vmax=max(density)/1.5))
 
     ax.legend() 
     fig.tight_layout()
-
     plt.show()
 
 
@@ -583,19 +599,20 @@ def main():
     # A = generate_AB_graph_ensure_m_edges(2018, 2, save_to_file=True)
     # A = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
 
-    a_plot_degree_distrib(A)
+    # a_plot_degree_distrib(A)
 
-    b_plot_clustering_coef_distrib(A)
+    # b_plot_clustering_coef_distrib(A)
 
-    c_plot_shortest_paths(A)
+    # c_plot_shortest_paths(A)
 
+
+    get_degree_correl(A)
 
     exit()
 
 
     d_get_connected_compo(A)
 
-    # get_degree_correl(A)
 
     # eigenval_distrib(A)
 
