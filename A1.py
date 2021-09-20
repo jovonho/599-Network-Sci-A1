@@ -528,8 +528,11 @@ def e_get_eigenval_distrib(graph):
     print(f"Eigenvalues of Laplacian matrix: {eigenvals_L}")
     
     num_zeros = sparse.csgraph.connected_components(sp.sparse.csgraph.laplacian(graph), directed=False, return_labels=False)
-    print(f"Spectral gap: {eigenvals_L[len(eigenvals_L)-1-num_zeros]}")
-
+    if num_zeros < len(eigenvals_L):
+      print(f"Spectral gap: {eigenvals_L[len(eigenvals_L)-1-num_zeros]}")
+    else: 
+      print("Spectral gap: 0}")
+  
     fig, (ax1, ax2) = plt.subplots(nrows=2, figsize=(13, 7))
 
     ax1.set_title("Eigenvalue Distribution of Adjacency Matrix")
