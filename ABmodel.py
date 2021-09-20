@@ -214,6 +214,8 @@ def generate_AB_graph_ensure_m_edges(n, m):
 
     total_degree = 2
 
+    print(f"*** Generating BA Model with n: {n}, m: {m} ***")
+
     for i in range(2, n):
 
         # Copy the current nodes and their degree

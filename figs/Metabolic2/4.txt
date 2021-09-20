@@ -1,0 +1,8 @@
+A nnz: 9482
+A shape: (1039, 1039)
+
+Total degree: 9482
+Average degree: 9.126082771896053
+
+Number of Connected Components: 1
+Proportion of nodes in GCC: 1.0

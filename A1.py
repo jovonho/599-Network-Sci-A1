@@ -18,6 +18,8 @@ from scipy.sparse import csgraph
 from scipy.sparse.csr import csr_matrix
 import seaborn as sns
 import math 
+import pathlib
+
 
 from ABmodel import generate_AB_graph, generate_AB_graph_ensure_m_edges
 
@@ -113,7 +115,7 @@ def load_matrix(filename="./data/metabolic.edgelist.txt", AB_graph=False):
 
 
 
-def a_plot_degree_distrib(A):
+def a_plot_degree_distrib(A, model_name):
 
     degrees = get_degrees(A)
 
@@ -129,7 +131,7 @@ def a_plot_degree_distrib(A):
 
     # Count the number of occurence of each degree
     counts = Counter(degrees)
-    print(counts)
+    # print(counts)
 
     k, Nk = list(counts.keys()), np.array(list(counts.values()))
 
@@ -153,22 +155,21 @@ def a_plot_degree_distrib(A):
     # This is a dark art, too many bins and the first few contain no nodes 
     num_bins = int(stop) * 7
     
-    print(f"Num bins: {num_bins}")
+    # print(f"Num bins: {num_bins}")
     bins = np.logspace(start=0, stop=stop, base=10, num=num_bins, endpoint=True)
 
     # bins = np.linspace(start=min(k), stop=max(k), num=num_bins)
 
-    print(f"Bins: {bins}")
+    # print(f"Bins: {bins}")
 
     # Subtract 1 to get 0-based indices
     digitized = np.digitize(degrees, bins)
 
-    # digitized = np.digitize([10,3,56,2,3,1,1,1,1,5,7], [1,2,4,8]) - 1
-    print(f"digitized: {digitized}")
+    # print(f"digitized: {digitized}")
 
 
     bin_counts = Counter(digitized)
-    print(f"Nn_count: {bin_counts}")
+    # print(f"Nn_count: {bin_counts}")
 
     Nn = []
 
@@ -262,9 +263,11 @@ def a_plot_degree_distrib(A):
     ax2.plot(kn, yfit2(kn), c='r', label=f"Exp: {fit2.coef[0]}")
     ax2.legend()
 
-    fig.suptitle('Degree Distribution')
+    fig.suptitle(f'{model_name}: Degree Distribution')
     fig.tight_layout()
-    plt.show()
+
+    plt.savefig(f"./figs/{model_name}/test/1 - Degree Distrib.png", format="png")
+    plt.close()
 
 
 def get_degrees(graph):
@@ -288,9 +291,6 @@ def get_clustering_coefs(graph, avg=False):
 
     N = A3.shape[0]
 
-    #Note: accessing a sparse matrix by index is slow
-    # clustering_coefs = [A3[i,i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(n)]
-
     A3_diag = A3.diagonal()
 
     clustering_coefs = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(N)]
@@ -305,184 +305,19 @@ def get_clustering_coefs(graph, avg=False):
         return clustering_coefs, deg, sum(clustering_coefs) / N
 
     return clustering_coefs, deg
-    
-
-# It does phonecalls in ~7min
-# About O(n3)
-def c_plot_shortest_paths(graph):
-
-    N = graph.shape[0]
-
-    # TODO Remove this, just to check our results
-    import networkx as nx 
-
-    G = nx.from_scipy_sparse_matrix(graph)
-    nx_sps = nx.shortest_path_length(G)
 
 
-    mean_distances = []
-    for node, sps in nx_sps:
-        mean_dist = sum(sps.values()) / len(sps.values())
-        mean_distances.append(mean_dist)
-
-    mean_distance_global = np.mean(mean_distances)
-    print(f"NX Global mean dist: {mean_distance_global}")
-
-
-    t1 = time.time()
-    # Saw the note in documentation about D possible conflict with directed=False 
-    # but out graphs are always symmetric so should work fine.
-    # shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False, unweighted=True )
-
-    # TODO Find out which one is fastest
-    shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False)
-    shortest_paths = shortest_paths[np.isfinite(shortest_paths)]
-
-    # As in the NI book Section 10.2
-    avg_sp = shortest_paths.sum() / (N ** 2)
-    
-
-    print(f"Average path length: {avg_sp}")
-
-    shortest_paths = csr_matrix(shortest_paths)
-
-    print(f"Number of shortest path lengths: {len(shortest_paths.data)}")
-
-    counts = Counter(shortest_paths.data)
-
-
-    t2 = time.time()
-    print(f"Time to get shortest paths: {t2-t1} s")
-
-    fig, ax = plt.subplots(figsize=(9,6))
-
-    trans = ax.get_xaxis_transform()
-
-    ax.set_title("Shortest Path Distribution")
-    ax.set_xlabel("Shortest Path Length")
-    ax.set_ylabel("Count")
-
-    avg_cc_label = "{:.2f}".format(avg_sp)
-    ax.axvline(x=avg_sp, color='grey', linestyle='--', alpha=.7)
-    ax.text(avg_sp + .02, .9, f"Mean = {avg_cc_label}", transform=trans)
-
-    ax.grid(True, which='both', linestyle='--')
-    ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-
-
-    ax.hist(shortest_paths.data, color='purple', bins=5)
-    # sns.distplot(shortest_paths.data, hist = False, kde = True, kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
-
-    fig.tight_layout()
-
-    plt.show()
-
-
-
-def d_get_connected_compo(graph):
-    t1 = time.time()
-    con_comp, labels = sparse.csgraph.connected_components(graph, directed=False, return_labels=True)
-    print(f"\nNumber of Connected Components: {con_comp}")
-
-    N = labels.shape[0]
-
-    counts = Counter(labels)
-
-    GCC, GCC_len = counts.most_common(1)[0]
-
-    nodes_in_GCC = GCC_len / N
-
-    print(f"Proportion of nodes in GCC: {nodes_in_GCC}")
-
-    t2 = time.time()    
-    print(f"Time to get comnnected components: {t2-t1} s")
-
-
-
-def f_get_degree_correl(graph):
-    t1 = time.time()
-    degs = get_degrees(graph)
-    n = degs.shape[0]
-
-    X = []
-    Y = []
-
-    # O(n2)
-    # Efficient row slicing with CSR
-    for i in range(n):
-        row = graph.getrow(i).toarray()[0]
-        # print(f"Row {i}: {row}")
-        
-        for j in range(n):
-            if row[j] == 1:
-                # print(f"Node {i} links to node {j}")
-                X.append(degs[i])
-                Y.append(degs[j])
-
-
-
-    t2 = time.time()    
-    print(f"Time to calculate degree correlations: {t2-t1} s")
-
-    # correl = np.corrcoef(X, Y)
-    # print(f"Correl {correl}")
-
-    # Correct way to compute the R value is given in NI book, Section 7.7.2
-
-    slope, intercept, r_value, p_value, std_err = stats.linregress(X, Y)
-    print(f"R value {r_value}")
-
-    import networkx
-
-    G = networkx.from_scipy_sparse_matrix(graph)
-    r_value = networkx.algorithms.assortativity.degree_pearson_correlation_coefficient(G)
-    print(f"R value from nx {r_value}")
-
-
-    dataset = pd.DataFrame({'di': X, 'dj': Y}, columns=['di', 'dj'])
-
-
-    fig, ax = plt.subplots(figsize=(9, 6))
-
-    ax.set_title("Degree Correlation between nodes i and j")
-    ax.set_xlabel("degree of node i")
-    ax.set_ylabel("degree of node j")
-
-    # Create empty plot with blank marker containing the extra label
-    R = "{:.2f}".format(r_value)
-    ax.plot([], [], ' ', label=f"R: {R}")
-
-    ax.grid(True, which='both', linestyle='--')
-    ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-
-
-    # Get the point density
-    c = Counter(zip(X,Y))
-    density = [100 * c[(xx,yy)] for xx,yy in zip(X,Y)]
-
-    ax.scatter(X, Y, s=1, c=density, cmap='gist_yarg', norm=colors.LogNorm(vmin=1, vmax=max(density)/1.5))
-
-    # Old version, showed less detail
-    # sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), binwidth=50, cbar=True, ax=ax)
-
-    ax.legend() 
-    fig.tight_layout()
-    plt.show()
-
-
-def b_plot_clustering_coef_distrib(A):
+def b_plot_clustering_coef_distrib(A, model_name):
     cc, _, avg_cc = get_clustering_coefs(A, avg=True)
 
-    print(f"Avg cc: {avg_cc}")
+    print(f"\nAvg cc: {avg_cc}")
 
     counts = Counter(cc)
-
-    print(counts)
 
     fig, ax = plt.subplots(figsize=(13, 7))
 
 
-    ax.set_title("Clustering Coef Distribution")
+    ax.set_title(f"{model_name}: Clustering Coefficient Distribution")
     ax.set_xlabel("Local Clustering Coefficient")
     ax.set_ylabel("Density")
 
@@ -505,7 +340,96 @@ def b_plot_clustering_coef_distrib(A):
     sns.kdeplot(data=cc, fill=True, color='purple', ax=ax)
 
     fig.tight_layout()
-    plt.show()
+    plt.savefig(f"./figs/{model_name}/test/2 - Clustering Coef.png", format="png")
+    plt.close()
+
+# It does phonecalls in ~7min
+# About O(n3)
+def c_plot_shortest_paths(graph, model_name):
+
+    N = graph.shape[0]
+
+    # TODO Remove this, its just to check our results
+    import networkx as nx 
+
+    G = nx.from_scipy_sparse_matrix(graph)
+    nx_sps = nx.shortest_path_length(G)
+
+
+    mean_distances = []
+    for _, sps in nx_sps:
+        mean_dist = sum(sps.values()) / len(sps.values())
+        mean_distances.append(mean_dist)
+
+    mean_distance_global = np.mean(mean_distances)
+    print(f"NX Average path length: {mean_distance_global}")
+
+
+    t1 = time.time()
+
+    # Saw the note in documentation about D possible conflict with directed=False 
+    # but out graphs are always symmetric so should work fine.
+    # shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False, unweighted=True )
+    shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False)
+    shortest_paths = shortest_paths[np.isfinite(shortest_paths)]
+
+    # As in the NI book Section 10.2
+    avg_sp = shortest_paths.sum() / (N ** 2)
+    
+    print(f"My Average path length: {avg_sp}")
+
+    shortest_paths = csr_matrix(shortest_paths)
+
+    t2 = time.time()
+    print(f"Time to get shortest paths: {t2-t1} s")
+
+    fig, ax = plt.subplots(figsize=(9,6))
+
+    trans = ax.get_xaxis_transform()
+
+    ax.set_title(f"{model_name}: Shortest Path Distribution")
+    ax.set_xlabel("Shortest Path Length")
+    ax.set_ylabel("Count")
+
+    avg_cc_label = "{:.2f}".format(avg_sp)
+    ax.axvline(x=avg_sp, color='grey', linestyle='--', alpha=.7)
+    ax.text(avg_sp + .02, .9, f"Mean = {avg_cc_label}", transform=trans)
+
+    ax.grid(True, which='both', linestyle='--')
+    ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+
+
+    ax.hist(shortest_paths.data, color='purple', bins=5)
+    # sns.distplot(shortest_paths.data, hist = False, kde = True, kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
+
+    fig.tight_layout()
+    plt.savefig(f"./figs/{model_name}/test/3 - Shortest Paths.png", format="png")
+    plt.close()
+
+
+
+
+def d_get_connected_compo(graph, model_name):
+    t1 = time.time()
+    con_comp, labels = sparse.csgraph.connected_components(graph, directed=False, return_labels=True)
+    print(f"\nNumber of Connected Components: {con_comp}")
+
+    N = labels.shape[0]
+
+    counts = Counter(labels)
+
+    GCC, GCC_len = counts.most_common(1)[0]
+
+    nodes_in_GCC = GCC_len / N
+
+    print(f"Proportion of nodes in GCC: {nodes_in_GCC}")
+
+    t2 = time.time()    
+    print(f"Time to get comnnected components: {t2-t1} s")
+
+    with open(f"./figs/{model_name}/test/4 - Connected Components.txt") as outfile:
+        outfile.write(f"Number of Connected Components:\t{con_comp}\n")
+        outfile.write(f"Proportion of nodes in GCC:\t\t{nodes_in_GCC}\n")
 
 
 def e_get_eigenval_distrib(graph):
@@ -555,8 +479,74 @@ def e_get_eigenval_distrib(graph):
     plt.show()
 
 
+
+def f_get_degree_correl(graph, model_name):
+    t1 = time.time()
+    degs = get_degrees(graph)
+    n = degs.shape[0]
+
+    X = []
+    Y = []
+
+    # O(n2)
+    # Efficient row slicing with CSR
+    for i in range(n):
+        row = graph.getrow(i).toarray()[0]
+        # print(f"Row {i}: {row}")
+        
+        for j in range(n):
+            if row[j] == 1:
+                # print(f"Node {i} links to node {j}")
+                X.append(degs[i])
+                Y.append(degs[j])
+
+
+
+    t2 = time.time()    
+    print(f"Time to calculate degree correlations: {t2-t1} s")
+
+    # Doesn't seem like it should work but compared with the one NX gives, it seems fine
+    slope, intercept, r_value, p_value, std_err = stats.linregress(X, Y)
+    print(f"R value {r_value}")
+
+    import networkx
+
+    G = networkx.from_scipy_sparse_matrix(graph)
+    r_value = networkx.algorithms.assortativity.degree_pearson_correlation_coefficient(G)
+    print(f"R value from nx {r_value}")
+
+
+    fig, ax = plt.subplots(figsize=(9, 6))
+
+    ax.set_title(f"{model_name}: Degree Correlation between nodes i and j")
+    ax.set_xlabel("degree of node i")
+    ax.set_ylabel("degree of node j")
+
+    # Create empty plot with blank marker containing the extra label
+    R = "{:.2f}".format(r_value)
+    ax.plot([], [], ' ', label=f"R: {R}")
+
+    ax.grid(True, which='both', linestyle='--')
+    ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+
+    # Get the point density
+    c = Counter(zip(X,Y))
+    density = [100 * c[(xx,yy)] for xx,yy in zip(X,Y)]
+
+    ax.scatter(X, Y, s=1, c=density, cmap='gist_yarg', norm=colors.LogNorm(vmin=1, vmax=max(density)/1.5))
+
+    # Old version, showed less detail
+    # sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), binwidth=50, cbar=True, ax=ax)
+
+    ax.legend() 
+    fig.tight_layout()
+    plt.savefig(f"./figs/{model_name}/test/6 - Degree Correlation.png", format="png")
+    plt.close()
+
+
+
 # Complexity: 
-def g_plot_clustering_degree_rel(A):
+def g_plot_clustering_degree_rel(A, model_name):
 
     cc, d = get_clustering_coefs(A)
 
@@ -565,7 +555,7 @@ def g_plot_clustering_degree_rel(A):
 
     fig, ax = plt.subplots(figsize=(13, 7))
 
-    ax.set_title("Clustering Coef vs Degree")
+    ax.set_title(f"{model_name}: Clustering Coefficient vs Degree")
     ax.set_xlabel("Local Clustering Coefficient")
     ax.set_ylabel("Degree")
     ax.set_xscale('log', base=10)
@@ -590,27 +580,31 @@ def main():
     print("\n\n")
 
     # G = load_matrix("./data/powergrid.edgelist.txt")
-    G = load_matrix("./data/collaboration.edgelist.txt")
-    # G = load_matrix("./data/metabolic.edgelist.txt")
+    # G = load_matrix("./data/collaboration.edgelist.txt")
+    G = load_matrix("./data/powergrid.edgelist.txt")
     # G = load_matrix("./data/AB_ensure_n1039_m5.edgelist.txt")
 
     # G = generate_AB_graph_ensure_m_edges(1039, 5)
 
     # G = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
 
-    # a_plot_degree_distrib(G)
+    model_name = "Powergrid"
 
-    # b_plot_clustering_coef_distrib(G)
+    pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
 
-    c_plot_shortest_paths(G)
+    a_plot_degree_distrib(G, model_name)
 
-    # d_get_connected_compo(G)
+    b_plot_clustering_coef_distrib(G, model_name)
 
-    e_get_eigenval_distrib(G)
+    c_plot_shortest_paths(G, model_name)
 
-    f_get_degree_correl(G)
+    d_get_connected_compo(G)
 
-    # g_plot_clustering_degree_rel(G)
+    e_get_eigenval_distrib(G, model_name)
+
+    f_get_degree_correl(G, model_name)
+
+    g_plot_clustering_degree_rel(G, model_name)
 
 
     t2 = time.time()

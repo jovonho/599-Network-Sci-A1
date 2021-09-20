@@ -1,0 +1,6 @@
+*** Generating BA Model with n: 1039, m: 5 ***
+A nnz: 10162
+A shape: (1039, 1039)
+
+Total degree: 10372
+Average degree: 9.982675649663138
