@@ -1,0 +1,3 @@
+A shape: (5400, 5400)
+Total degree: 10798
+Average degree: 1.9996296296296296

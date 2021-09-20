@@ -1,0 +1,3 @@
+A shape: (1039, 1039)
+Total degree: 10372
+Average degree: 9.982675649663138

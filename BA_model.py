@@ -1,4 +1,3 @@
-
 import collections
 from scipy import sparse
 import numpy as np
@@ -11,10 +10,11 @@ import matplotlib.pyplot as plt
 log = logging.getLogger(__name__)
 
 import sys
+
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
 
-fh = handlers.RotatingFileHandler(filename='./log/ABmodel.log', encoding='utf-8')
+fh = handlers.RotatingFileHandler(filename="./log/ABmodel.log", encoding="utf-8")
 fh.setLevel(logging.DEBUG)
 
 log.addHandler(ch)
@@ -43,26 +43,25 @@ def compare_degree_distrib(A1, A2):
 
     X2, Y2 = list(counts2.keys()), list(counts2.values())
 
-
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(13, 7))
 
     ax1.set_title("Method 1: random candidate choice")
     ax1.set_ylabel("P(k)")
     ax1.set_xlabel("k")
-    ax1.set_xscale('log', base=10)
-    ax1.set_yscale('log', base=10)
-    ax1.tick_params(which='both', direction="in")
+    ax1.set_xscale("log", base=10)
+    ax1.set_yscale("log", base=10)
+    ax1.tick_params(which="both", direction="in")
 
     ax1.scatter(X1, Y1)
 
     ax2.set_title("Method 2: iterating over existing nodes")
     ax2.set_ylabel("P(k)")
     ax2.set_xlabel("k")
-    ax2.set_xscale('log', base=10)
-    ax2.set_yscale('log', base=10)
-    ax2.tick_params(which='both', direction="in")
+    ax2.set_xscale("log", base=10)
+    ax2.set_yscale("log", base=10)
+    ax2.tick_params(which="both", direction="in")
 
-    ax2.scatter(X2, Y2, c='r')
+    ax2.scatter(X2, Y2, c="r")
 
     fig.tight_layout()
     plt.show()
@@ -80,7 +79,6 @@ def plot_degree_distrib(A):
         print(f"Node {i} has degree: {sum(row)}")
         degrees1.append(sum(row))
 
-
     total_degree1 = sum(degrees1)
 
     print(f"Degrees: {degrees1}, len(degrees): {len(degrees1)}")
@@ -95,9 +93,9 @@ def plot_degree_distrib(A):
     ax1.set_title("Method 1: random candidate choice")
     ax1.set_ylabel("P(k)")
     ax1.set_xlabel("k")
-    ax1.set_xscale('log', base=10)
-    ax1.set_yscale('log', base=10)
-    ax1.tick_params(which='both', direction="in")
+    ax1.set_xscale("log", base=10)
+    ax1.set_yscale("log", base=10)
+    ax1.tick_params(which="both", direction="in")
 
     ax1.scatter(X1, Y1)
 
@@ -105,22 +103,18 @@ def plot_degree_distrib(A):
     plt.show()
 
 
-
 # Complexity: O(n^2) but much quicker than randomly picking candidates in practice
 def generate_BA_graph(n, m):
 
     # Initialize our data structures
 
-    # These list are in COO format, where an Matrix(row[i], col[i]) = 1 if there is a link 
+    # These list are in COO format, where an Matrix(row[i], col[i]) = 1 if there is a link
     # We want our graph to be undirected so we insert edges in both directions.
-    row = [0,1]
-    col = [1,0]
+    row = [0, 1]
+    col = [1, 0]
 
     # This dictionary will keep track of the degrees of each nodes
-    nodes = {
-        0: 1,
-        1: 1
-    }
+    nodes = {0: 1, 1: 1}
 
     total_degree = 2
 
@@ -137,15 +131,15 @@ def generate_BA_graph(n, m):
         log.debug(f"\tDegrees at time t={i}: {candidate_nodes}")
 
         # Here we iterate over the existing nodes always in the same order
-        for k, k_deg in candidate_nodes.items():   
-            
-            log.debug(f"\tTrying to link node {k}") 
+        for k, k_deg in candidate_nodes.items():
+
+            log.debug(f"\tTrying to link node {k}")
 
             # Compute the probability of linking node k to i
             p = k_deg / total_degree_at_t
             log.debug(f"\tProb of linking node {k} to {i}: {p}")
 
-            make_link = np.random.choice([0,1], p = [(1-p), p])
+            make_link = np.random.choice([0, 1], p=[(1 - p), p])
 
             if make_link:
                 links_made += 1
@@ -176,7 +170,7 @@ def generate_BA_graph(n, m):
             log.debug(f"\t*** No more candidate nodes. Links made for node {i}: {links_made}")
 
     # Data will be all ones
-    nnz = len(row)    
+    nnz = len(row)
     data = np.ones(nnz)
 
     # TODO BROKEN
@@ -186,33 +180,25 @@ def generate_BA_graph(n, m):
                 outfile.write(f"{row[i]}\t{col[i]}\n")
             outfile.write("\n")
 
-
     # Generate the sparse matrix only at the end, from the coordinate lists
-    graph = coo_matrix((data, (row, col)),  shape=(n, n), dtype=np.int32)
-
+    graph = coo_matrix((data, (row, col)), shape=(n, n), dtype=np.int32)
 
     return graph.tocsr()
-
-
 
 
 # Complexity: O(n^2) but much quicker than randomly picking candidates in practice
 def generate_BA_graph_ensure_m_edges(n, m):
     t1 = time.time()
 
-
     # Initialize our data structures
 
-    # These list are in COO format, where an Matrix(row[i], col[i]) = 1 if there is a link 
+    # These list are in COO format, where an Matrix(row[i], col[i]) = 1 if there is a link
     # We want our graph to be undirected so we insert edges in both directions.
-    row = [0,1]
-    col = [1,0]
+    row = [0, 1]
+    col = [1, 0]
 
     # This dictionary will keep track of the degrees of each nodes
-    nodes = {
-        0: 1,
-        1: 1
-    }
+    nodes = {0: 1, 1: 1}
 
     total_degree = 2
 
@@ -220,7 +206,9 @@ def generate_BA_graph_ensure_m_edges(n, m):
 
     for i in range(2, n):
 
-        if i % 1000 == 0:
+        m2 = m
+
+        if i % 500 == 0:
             print(f"Adding node {i}")
 
         # Copy the current nodes and their degree
@@ -234,30 +222,29 @@ def generate_BA_graph_ensure_m_edges(n, m):
         log.debug(f"\tDegrees at time t={i}: {candidate_nodes}")
 
         # TO not have infinite lop when m > 2
-        if i <= m:  
-            m = i
+        if i <= m:
+            m2 = i
 
-        while links_made < m:
+        while links_made < m2:
             log.debug(f"linking node {i}")
+            # print(f"linking node {i}, need to make {m2} edges")
 
             # Here we iterate over the existing nodes always in the same order
-            for k, k_deg in candidate_nodes.items():   
-                
-                log.debug(f"\tTrying to link node {k}") 
+            for k, k_deg in candidate_nodes.items():
+
+                log.debug(f"\tTrying to link node {k}")
 
                 # Compute the probability of linking node k to i
                 p = k_deg / total_degree_at_t
                 log.debug(f"\tProb of linking node {k} to {i}: {p}")
 
-                make_link = np.random.choice([0,1], p = [(1-p), p])
+                make_link = np.random.choice([0, 1], p=[(1 - p), p])
 
                 if make_link:
                     links_made += 1
 
-
                     # TODO: Keep track of which nodes we've connected to, maybe it makes multiple edges to a single node!
                     log.debug(f"\t*** Nodes {k} and {i} linked!")
-
 
                     # Add the new link to the row and col lists
                     # We add the link in both directions (k, i) and (i, k) so the matrix will be symmetric
@@ -276,16 +263,16 @@ def generate_BA_graph_ensure_m_edges(n, m):
                     total_degree += 2
 
                     if links_made == m:
-                        log.debug(f"\t******All {m} links made for node {i}!!")
+                        log.debug(f"\t******All {m2} links made for node {i}!!")
                         break
 
-            log.debug(f"We've iterated through all the nodes. links made: {links_made} vs {m}")
+            log.debug(f"We've iterated through all the nodes. links made: {links_made} vs {m2}")
 
             # if links_made < m:
             #     log.debug(f"\t*** No more candidate nodes. Links made for node {i}: {links_made}")
 
     # Data will be all ones
-    nnz = len(row)    
+    nnz = len(row)
     data = np.ones(nnz)
 
     row_col = [(row[i], col[i]) for i in range(len(row))]
@@ -298,9 +285,8 @@ def generate_BA_graph_ensure_m_edges(n, m):
                 print(f"Writing {row_col[i][0]}\t{row_col[i][1]}\n")
                 outfile.write(f"{row_col[i][0]}\t{row_col[i][1]}\n")
 
-
     # Generate the sparse matrix only at the end, from the coordinate lists
-    graph = coo_matrix((data, (row, col)),  shape=(n, n), dtype=np.int32)
+    graph = coo_matrix((data, (row, col)), shape=(n, n), dtype=np.int32)
 
     t2 = time.time()
     print(f"Time to generate AB model(n={n}, m={m}) with version 2: {t2-t1} s")
@@ -315,16 +301,13 @@ def generate_BA_graph_preferential_inattachment(n, m):
 
     # Initialize our data structures
 
-    # These list are in COO format, where an Matrix(row[i], col[i]) = 1 if there is a link 
+    # These list are in COO format, where an Matrix(row[i], col[i]) = 1 if there is a link
     # We want our graph to be undirected so we insert edges in both directions.
-    row = [0,1]
-    col = [1,0]
+    row = [0, 1]
+    col = [1, 0]
 
     # This dictionary will keep track of the degrees of each nodes
-    nodes = {
-        0: 1,
-        1: 1
-    }
+    nodes = {0: 1, 1: 1}
 
     total_degree = 2
 
@@ -345,27 +328,24 @@ def generate_BA_graph_preferential_inattachment(n, m):
         log.debug(f"Adding new node {i}")
         log.debug(f"\tDegrees at time t={i}: {candidate_nodes}")
 
-
-
         while links_made < m:
             log.debug(f"linking node {i}")
 
             # Here we iterate over the existing nodes always in the same order
-            for k, k_deg in candidate_nodes.items():   
-                
-                log.debug(f"\tTrying to link node {k}") 
+            for k, k_deg in candidate_nodes.items():
+
+                log.debug(f"\tTrying to link node {k}")
 
                 # Compute the probability of linking node k to i
                 p = 1 - (k_deg / total_degree_at_t)
                 log.debug(f"\tProb of linking node {k} to {i}: {p}")
 
-                make_link = np.random.choice([0,1], p = [(1-p), p])
+                make_link = np.random.choice([0, 1], p=[(1 - p), p])
 
                 if make_link:
                     links_made += 1
 
                     log.debug(f"\t*** Nodes {k} and {i} linked!")
-
 
                     # Add the new link to the row and col lists
                     # We add the link in both directions (k, i) and (i, k) so the matrix will be symmetric
@@ -393,7 +373,7 @@ def generate_BA_graph_preferential_inattachment(n, m):
             #     log.debug(f"\t*** No more candidate nodes. Links made for node {i}: {links_made}")
 
     # Data will be all ones
-    nnz = len(row)    
+    nnz = len(row)
     data = np.ones(nnz)
 
     row_col = [(row[i], col[i]) for i in range(len(row))]
@@ -406,9 +386,8 @@ def generate_BA_graph_preferential_inattachment(n, m):
                 print(f"Writing {row_col[i][0]}\t{row_col[i][1]}\n")
                 outfile.write(f"{row_col[i][0]}\t{row_col[i][1]}\n")
 
-
     # Generate the sparse matrix only at the end, from the coordinate lists
-    graph = coo_matrix((data, (row, col)),  shape=(n, n), dtype=np.int32)
+    graph = coo_matrix((data, (row, col)), shape=(n, n), dtype=np.int32)
 
     t2 = time.time()
     print(f"Time to generate AB model(n={n}, m={m}) with version 2: {t2-t1} s")
@@ -422,8 +401,8 @@ def main():
 
     log.setLevel(logging.DEBUG)
 
-    n=1039
-    m=5
+    n = 1039
+    m = 5
 
     t1 = time.time()
     graph = generate_BA_graph_ensure_m_edges(4000, 40)
@@ -437,7 +416,7 @@ def main():
 
     print(graph.A)
 
-    A_minus_AT = graph - graph.T  
+    A_minus_AT = graph - graph.T
 
     print(f"\nIs A symmetric? (Is A - A.T all zeros?): {A_minus_AT.nnz == 0}")
 
@@ -448,5 +427,5 @@ def main():
     plot_degree_distrib(graph)
 
 
-if __name__=='__main__':
+if __name__ == "__main__":
     main()
