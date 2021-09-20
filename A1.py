@@ -21,7 +21,7 @@ import math
 import pathlib
 
 
-from ABmodel import generate_AB_graph, generate_AB_graph_ensure_m_edges
+from BA_model import generate_BA_graph, generate_BA_graph_ensure_m_edges, generate_BA_graph_preferential_inattachment
 
 from memory_profiler import profile
 
@@ -427,14 +427,12 @@ def d_get_connected_compo(graph, model_name):
         outfile.write(f"Proportion of nodes in GCC:\t\t{nodes_in_GCC}\n")
 
 
-def e_get_eigenval_distrib(graph, model_name):
+def e_get_eigenval_distrib(graph, model_name, k=100):
 
     t1 = time.time()
 
     L = sparse.csgraph.laplacian(graph)
 
-    # k = graph.shape[0]-1
-    k = 100
 
     # Need to use float
     eigenvals_L = sparse.linalg.eigsh(L.asfptype(), k=k, return_eigenvectors=False, which = 'SM')
@@ -580,30 +578,145 @@ def main():
 
     # G = load_matrix("./data/powergrid.edgelist.txt")
     # G = load_matrix("./data/collaboration.edgelist.txt")
-    # G = load_matrix("./data/email.edgelist.txt")
-    # G = load_matrix("./data/AB_ensure_n1039_m5.edgelist.txt")
 
-    G = generate_AB_graph_ensure_m_edges(4941, 1)
 
-    # G = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
+    # G_inattached = generate_BA_graph_preferential_inattachment(5000, 4)
 
-    model_name = "BA model n=4941 m=1"
+    # model_name = "BA Preferentially Unattached"
+
+    # pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
+
+    # a_plot_degree_distrib(G_inattached, model_name)
+
+    # b_plot_clustering_coef_distrib(G_inattached, model_name)
+
+    # c_plot_shortest_paths(G_inattached, model_name)
+
+    # d_get_connected_compo(G_inattached, model_name)
+
+    # f_get_degree_correl(G_inattached, model_name)
+
+    # g_plot_clustering_degree_rel(G_inattached, model_name)
+
+    # e_get_eigenval_distrib(G_inattached, model_name, k=100)
+
+
+    # BA_og_1039_5 = generate_BA_graph(1039, 10)
+
+    # model_name = "BA Model original n=1039 m=10"
+
+    # pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
+
+    # a_plot_degree_distrib(BA_og_1039_5, model_name)
+
+    # b_plot_clustering_coef_distrib(BA_og_1039_5, model_name)
+
+    # c_plot_shortest_paths(BA_og_1039_5, model_name)
+
+    # d_get_connected_compo(BA_og_1039_5, model_name)
+
+    # f_get_degree_correl(BA_og_1039_5, model_name)
+
+    # g_plot_clustering_degree_rel(BA_og_1039_5, model_name)
+
+    # e_get_eigenval_distrib(BA_og_1039_5, model_name, k=100)
+
+
+
+
+
+
+    t1 = time.time()
+
+
+
+    G_BA35k = generate_BA_graph_ensure_m_edges(35000, 2)
+
+    model_name = "BA model n=35000 m=2"
 
     pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
 
-    a_plot_degree_distrib(G, model_name)
+    a_plot_degree_distrib(G_BA35k, model_name)
 
-    b_plot_clustering_coef_distrib(G, model_name)
+    b_plot_clustering_coef_distrib(G_BA35k, model_name)
 
-    c_plot_shortest_paths(G, model_name)
+    c_plot_shortest_paths(G_BA35k, model_name)
 
-    d_get_connected_compo(G, model_name)
+    d_get_connected_compo(G_BA35k, model_name)
 
-    e_get_eigenval_distrib(G, model_name)
+    f_get_degree_correl(G_BA35k, model_name)
 
-    f_get_degree_correl(G, model_name)
+    g_plot_clustering_degree_rel(G_BA35k, model_name)
 
-    g_plot_clustering_degree_rel(G, model_name)
+    e_get_eigenval_distrib(G_BA35k, model_name, k=50)
+
+
+    t2 = time.time()
+    print(f"Total running time: {t2-t1} s")
+
+    t1 = time.time()
+
+
+
+    G_BA35k_m1 = generate_BA_graph_ensure_m_edges(35000, 1)
+
+    model_name = "BA model n=35000 m=1"
+
+    pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
+
+    a_plot_degree_distrib(G_BA35k_m1, model_name)
+
+    b_plot_clustering_coef_distrib(G_BA35k_m1, model_name)
+
+    c_plot_shortest_paths(G_BA35k_m1, model_name)
+
+    d_get_connected_compo(G_BA35k_m1, model_name)
+
+    f_get_degree_correl(G_BA35k_m1, model_name)
+
+    g_plot_clustering_degree_rel(G_BA35k_m1, model_name)
+
+    e_get_eigenval_distrib(G_BA35k_m1, model_name, k=50)
+
+    t2 = time.time()
+    print(f"Total running time: {t2-t1} s")
+
+    t1 = time.time()
+
+
+
+    #
+    G_phonecalls = load_matrix("./data/phonecalls.edgelist.txt")
+    model_name = "Phonecalls"
+    e_get_eigenval_distrib(G_phonecalls, model_name, k=50)
+
+    t2 = time.time()
+    print(f"Total running time: {t2-t1} s")
+
+    t1 = time.time()
+
+
+
+
+    G_BA4000_m40 = generate_BA_graph_ensure_m_edges(4000, 40)
+
+    model_name = "BA model n=35000 m=1"
+
+    pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
+
+    a_plot_degree_distrib(G_BA4000_m40, model_name)
+
+    b_plot_clustering_coef_distrib(G_BA4000_m40, model_name)
+
+    c_plot_shortest_paths(G_BA4000_m40, model_name)
+
+    d_get_connected_compo(G_BA4000_m40, model_name)
+
+    f_get_degree_correl(G_BA4000_m40, model_name)
+
+    g_plot_clustering_degree_rel(G_BA4000_m40, model_name)
+
+    e_get_eigenval_distrib(G_BA4000_m40, model_name, k=50)
 
 
     t2 = time.time()

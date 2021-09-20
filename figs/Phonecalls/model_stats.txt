@@ -1,0 +1,3 @@
+A shape: (36595, 36595)
+Total degree: 113706
+Average degree: 3.1071457849432984

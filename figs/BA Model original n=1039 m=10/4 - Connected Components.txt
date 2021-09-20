@@ -1,0 +1,2 @@
+Number of Connected Components:		346
+Proportion of nodes in GCC:		0.6679499518768046
