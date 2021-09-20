@@ -218,6 +218,9 @@ def generate_AB_graph_ensure_m_edges(n, m):
 
     for i in range(2, n):
 
+        if i % 1000 == 0:
+            print(f"Adding node {i}")
+
         # Copy the current nodes and their degree
         candidate_nodes = nodes.copy()
         # Must get the keys te be able to remove values from it while iterating
@@ -229,7 +232,7 @@ def generate_AB_graph_ensure_m_edges(n, m):
         log.debug(f"\tDegrees at time t={i}: {candidate_nodes}")
 
         while links_made < m:
-            log.info(f"linking node {i}")
+            log.debug(f"linking node {i}")
 
             # Here we iterate over the existing nodes always in the same order
             for k, k_deg in candidate_nodes.items():   
