@@ -1,0 +1,2 @@
+Number of Connected Components:		1
+Proportion of nodes in GCC:		1.0

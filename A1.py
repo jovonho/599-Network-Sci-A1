@@ -575,16 +575,16 @@ def main():
 
     print("\n\n")
 
-    G = load_matrix("./data/powergrid.edgelist.txt")
+    # G = load_matrix("./data/metabolic.edgelist.txt")
     # G = load_matrix("./data/collaboration.edgelist.txt")
     # G = load_matrix("./data/email.edgelist.txt")
     # G = load_matrix("./data/AB_ensure_n1039_m5.edgelist.txt")
 
-    # G = generate_AB_graph_ensure_m_edges(1039, 5)
+    G = generate_AB_graph_ensure_m_edges(1039, 5)
 
     # G = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
 
-    model_name = "Powergrid"
+    model_name = "BA model n=1039 m=5"
 
     pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
 
