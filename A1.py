@@ -167,6 +167,7 @@ def a_plot_degree_distrib(A, model_name):
 
     # print(f"digitized: {digitized}")
 
+
     bin_counts = Counter(digitized)
     # print(f"Nn_count: {bin_counts}")
 
@@ -181,9 +182,13 @@ def a_plot_degree_distrib(A, model_name):
     while len(Nn) < (num_bins - 1):
         Nn.append(0)
 
+    print(f"Nn: {Nn}")
+
     bn = np.array(bins[1:] - bins[:-1])
 
     bn = np.append(bn, [bn[-1]*2])
+
+    print(f"Bin widths: {bn}\n")
 
 
     # THIS IS WEIRD
@@ -213,14 +218,20 @@ def a_plot_degree_distrib(A, model_name):
             kn.remove(kn_copy[i])
             pkn.remove(pkn_copy[i])
 
+
+    # print("kn")
+    # print(kn)
+    # print("pkn")
+    # print(pkn)
+    
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(13, 7))
     # fig, ax2 = plt.subplots(nrows=1, ncols=1, figsize=(8, 7))
 
     ax1.set_title("Raw Data")
     ax1.set_ylabel("P(k)")
     ax1.set_xlabel("k")
-    ax1.set_xscale('log', base=10)
-    ax1.set_yscale('log', base=10)
+    ax1.set_xscale('log', basex=10)
+    ax1.set_yscale('log', basey=10)
     ax1.tick_params(which='both', direction="in")
     ax1.grid(True, which='both', linestyle='--')
     ax1.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
@@ -230,8 +241,11 @@ def a_plot_degree_distrib(A, model_name):
     ax2.set_title("Log Binned Data")
     ax2.set_ylabel("P(k)")
     ax2.set_xlabel("k")
-    ax2.set_xscale('log', base=10)
-    ax2.set_yscale('log', base=10)
+    ax2.set_xscale('log', basex=10)
+    ax2.set_yscale('log', basey
+                   
+                   
+                   =10)
     ax2.tick_params(which='both', direction="in")
     ax2.grid(True, which='both', linestyle='--')
     ax2.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
@@ -239,14 +253,14 @@ def a_plot_degree_distrib(A, model_name):
     ax2.scatter(kn, pkn)
 
     fit1 = Polynomial.fit(np.log10(k), np.log10(pk), deg=1)
-    print(f"Gamma (unbinned): {fit1.coef[0]}")
+    print(f"Fit1: {fit1.coef}")
 
     yfit1 = lambda x: np.power(10, fit1(np.log10(x)))
     ax1.plot(k, yfit1(k), c='r', label=f"Exp: {fit1.coef[0]}")
     ax1.legend()
 
     fit2 = Polynomial.fit(np.log10(kn), np.log10(pkn), deg=1)
-    print(f"Gamma (log binned): {fit2.coef[0]}")
+    print(f"Fit2: {fit2.coef}")
 
     yfit2 = lambda x: np.power(10, fit2(np.log10(x)))
     ax2.plot(kn, yfit2(kn), c='r', label=f"Exp: {fit2.coef[0]}")
@@ -255,7 +269,7 @@ def a_plot_degree_distrib(A, model_name):
     fig.suptitle(f'{model_name}: Degree Distribution')
     fig.tight_layout()
 
-    plt.savefig(f"./figs/{model_name}/1 - Degree Distrib.png", format="png")
+    plt.savefig(f"./figs/{model_name}/test/1 - Degree Distrib.png", format="png")
     plt.close()
 
 
@@ -272,7 +286,6 @@ def get_clustering_coefs(graph, avg=False):
     G = nx.from_scipy_sparse_matrix(graph)
     print(f"NX avg clustering of graph: {nx.average_clustering(G)}")
 
-
     t1 = time.time()
     
     A3 = graph ** 3
@@ -286,8 +299,6 @@ def get_clustering_coefs(graph, avg=False):
     clustering_coefs = [A3_diag[i] / (deg[i] * (deg[i] - 1)) if (deg[i] - 1) > 0 else 0 for i in range(N)]
 
     clustering_coefs = np.array(clustering_coefs, dtype=np.float32)
-
-    print(f"My avg clustering: {sum(clustering_coefs) / N}")
 
     t2 = time.time()
 
@@ -332,7 +343,7 @@ def b_plot_clustering_coef_distrib(A, model_name):
     sns.kdeplot(data=cc, fill=True, color='purple', ax=ax)
 
     fig.tight_layout()
-    plt.savefig(f"./figs/{model_name}/2 - Clustering Coef.png", format="png")
+    plt.savefig(f"./figs/{model_name}/test/2 - Clustering Coef.png", format="png")
     plt.close()
 
 # It does phonecalls in ~7min
@@ -341,26 +352,26 @@ def c_plot_shortest_paths(graph, model_name):
 
     N = graph.shape[0]
 
-    # # TODO Remove this, its just to check our results
-    # import networkx as nx 
+    # TODO Remove this, its just to check our results
+    import networkx as nx 
 
-    # G = nx.from_scipy_sparse_matrix(graph)
-    # nx_sps = nx.shortest_path_length(G)
+    G = nx.from_scipy_sparse_matrix(graph)
+    nx_sps = nx.shortest_path_length(G)
 
 
-    # mean_distances = []
-    # for _, sps in nx_sps:
-    #     mean_dist = sum(sps.values()) / len(sps.values())
-    #     mean_distances.append(mean_dist)
+    mean_distances = []
+    for _, sps in nx_sps:
+        mean_dist = sum(sps.values()) / len(sps.values())
+        mean_distances.append(mean_dist)
 
-    # mean_distance_global = np.mean(mean_distances)
-    # print(f"NX Average path length: {mean_distance_global}")
+    mean_distance_global = np.mean(mean_distances)
+    print(f"NX Average path length: {mean_distance_global}")
 
 
     t1 = time.time()
 
     # Saw the note in documentation about D possible conflict with directed=False 
-    # but our graphs are always symmetric so should work fine.
+    # but out graphs are always symmetric so should work fine.
     # shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False, unweighted=True )
     shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False)
     shortest_paths = shortest_paths[np.isfinite(shortest_paths)]
@@ -395,7 +406,7 @@ def c_plot_shortest_paths(graph, model_name):
     # sns.distplot(shortest_paths.data, hist = False, kde = True, kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
 
     fig.tight_layout()
-    plt.savefig(f"./figs/{model_name}/3 - Shortest Paths.png", format="png")
+    plt.savefig(f"./figs/{model_name}/test/3 - Shortest Paths.png", format="png")
     plt.close()
 
 
@@ -419,58 +430,56 @@ def d_get_connected_compo(graph, model_name):
     t2 = time.time()    
     print(f"Time to get comnnected components: {t2-t1} s")
 
-    with open(f"./figs/{model_name}/4 - Connected Components.txt", "w") as outfile:
-        outfile.write(f"Number of Connected Components:\t\t{con_comp}\n")
+    with open(f"./figs/{model_name}/test/4 - Connected Components.txt") as outfile:
+        outfile.write(f"Number of Connected Components:\t{con_comp}\n")
         outfile.write(f"Proportion of nodes in GCC:\t\t{nodes_in_GCC}\n")
 
 
-def e_get_eigenval_distrib(graph, model_name):
+def e_get_eigenval_distrib(graph):
 
     t1 = time.time()
 
     L = sparse.csgraph.laplacian(graph)
 
-    # k = graph.shape[0]-1
-    k = 100
-
     # Need to use float
-    eigenvals_L = sparse.linalg.eigsh(L.asfptype(), k=k, return_eigenvectors=False, which = 'SM')
+    eigenvals = sparse.linalg.eigsh(graph.asfptype(), k=graph.shape[0]-1, return_eigenvectors=False, which = 'SM')
+    eigenvals_L = sparse.linalg.eigsh(L.asfptype(), k=L.shape[0]-1, return_eigenvectors=False, which = 'SM')
 
     t2 = time.time()    
-    print(f"Time to gt {k} Eigenvals: {t2-t1} s")
+    print(f"Time to gt Eigenvals: {t2-t1} s")
 
+    print(f"Adjacency eigenvals shape: {eigenvals.shape}")
+    print(f"Eigenvalues of adjacency matrix: {eigenvals}")
+    
+    print(f"Laplacian eigenvals shape: {eigenvals_L.shape}")
+    print(f"Eigenvalues of Laplacian matrix: {eigenvals_L}")
+    
     num_zeros = sparse.csgraph.connected_components(sp.sparse.csgraph.laplacian(graph), directed=False, return_labels=False)
-
-    spectral_gap = 0
-
     if num_zeros < len(eigenvals_L):
-        spectral_gap = eigenvals_L[len(eigenvals_L)-1-num_zeros]
-        print(f"Spectral gap: {spectral_gap}")
+      print(f"Spectral gap: {eigenvals_L[len(eigenvals_L)-1-num_zeros]}")
     else: 
-        print("Spectral gap: 0")
+      print("Spectral gap: 0}")
   
-    fig, ax = plt.subplots(figsize=(13, 7))
+    fig, (ax1, ax2) = plt.subplots(nrows=2, figsize=(13, 7))
 
-    ax.set_title(f"{model_name}: Distribution of {k} smallest eigenvalues of Laplacian matrix")
-    ax.set_xlabel("Eigenvalue")
-    ax.set_ylabel("Count")   
+    ax1.set_title("Eigenvalue Distribution of Adjacency Matrix")
+    ax1.set_xlabel("Eigenvalue")
+    ax1.set_ylabel("Density")
 
-    # Create empty plot with blank marker containing the extra label
-    # Format in scientific notation
-    spec = "{:e}".format(spectral_gap)
-    ax.plot([], [], ' ', label=f"Spectral gap: {spec}")
+    ax1.grid(True, which='both', linestyle='--')
+    ax1.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+    sns.kdeplot(data=eigenvals.real, fill=True, color='purple', ax=ax1)
 
-    ax.grid(True, which='both', linestyle='--')
-    ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
-    # sns.kdeplot(data=eigenvals_L.real, fill=True, color='purple', ax=ax, bw_adjust=0.2)
+    ax2.set_title("Eigenvalue Distribution of Laplacian Matrix")
+    ax2.set_xlabel("Eigenvalue")
+    ax2.set_ylabel("Density")   
 
-    ax.hist(eigenvals_L.real, color='purple', bins=20)
+    ax2.grid(True, which='both', linestyle='--')
+    ax2.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
+    sns.kdeplot(data=eigenvals_L.real, fill=True, color='purple', ax=ax2)
 
-    ax.legend()
     fig.tight_layout()
-
-    plt.savefig(f"./figs/{model_name}/5 - Eigenvalues.png", format="png")
-    plt.close()
+    plt.show()
 
 
 
@@ -485,8 +494,6 @@ def f_get_degree_correl(graph, model_name):
     # O(n2)
     # Efficient row slicing with CSR
     for i in range(n):
-        if i % 2000 == 0:
-            print(f"on row {i}")
         row = graph.getrow(i).toarray()[0]
         # print(f"Row {i}: {row}")
         
@@ -536,11 +543,12 @@ def f_get_degree_correl(graph, model_name):
 
     ax.legend() 
     fig.tight_layout()
-    plt.savefig(f"./figs/{model_name}/6 - Degree Correlation.png", format="png")
+    plt.savefig(f"./figs/{model_name}/test/6 - Degree Correlation.png", format="png")
     plt.close()
 
 
 
+# Complexity: 
 def g_plot_clustering_degree_rel(A, model_name):
 
     cc, d = get_clustering_coefs(A)
@@ -566,8 +574,7 @@ def g_plot_clustering_degree_rel(A, model_name):
     ax.scatter(cc, d, c=density, cmap='gist_yarg', norm=colors.LogNorm(vmin=1, vmax=max(density)/1.5))
 
     fig.tight_layout()
-    plt.savefig(f"./figs/{model_name}/7 - CC vs Degree.png", format="png")
-    plt.close()
+    plt.show()
 
 
 def main():
@@ -575,9 +582,9 @@ def main():
 
     print("\n\n")
 
-    G = load_matrix("./data/powergrid.edgelist.txt")
+    # G = load_matrix("./data/powergrid.edgelist.txt")
     # G = load_matrix("./data/collaboration.edgelist.txt")
-    # G = load_matrix("./data/email.edgelist.txt")
+    G = load_matrix("./data/powergrid.edgelist.txt")
     # G = load_matrix("./data/AB_ensure_n1039_m5.edgelist.txt")
 
     # G = generate_AB_graph_ensure_m_edges(1039, 5)
@@ -594,7 +601,7 @@ def main():
 
     c_plot_shortest_paths(G, model_name)
 
-    d_get_connected_compo(G, model_name)
+    d_get_connected_compo(G)
 
     e_get_eigenval_distrib(G, model_name)
 
