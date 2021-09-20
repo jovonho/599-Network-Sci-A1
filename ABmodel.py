@@ -105,8 +105,9 @@ def plot_degree_distrib(A):
     plt.show()
 
 
+
 # Complexity: O(n^2) but much quicker than randomly picking candidates in practice
-def generate_AB_graph(n, m, save_to_file=False):
+def generate_AB_graph(n, m):
 
     # Initialize our data structures
 
@@ -151,7 +152,6 @@ def generate_AB_graph(n, m, save_to_file=False):
 
                 log.debug(f"\t*** Nodes {k} and {i} linked!")
 
-
                 # Add the new link to the row and col lists
                 # We add the link in both directions (k, i) and (i, k) so the matrix will be symmetric
                 row.extend([k, i])
@@ -179,7 +179,8 @@ def generate_AB_graph(n, m, save_to_file=False):
     nnz = len(row)    
     data = np.ones(nnz)
 
-    if save_to_file:
+    # TODO BROKEN
+    if False:
         with open(f"./data/AB_n{n}_m{m}.edgelist.txt", "w") as outfile:
             for i in range(0, n):
                 outfile.write(f"{row[i]}\t{col[i]}\n")
@@ -196,7 +197,7 @@ def generate_AB_graph(n, m, save_to_file=False):
 
 
 # Complexity: O(n^2) but much quicker than randomly picking candidates in practice
-def generate_AB_graph_ensure_m_edges(n, m, save_to_file=False):
+def generate_AB_graph_ensure_m_edges(n, m):
 
     # Initialize our data structures
 
@@ -274,16 +275,19 @@ def generate_AB_graph_ensure_m_edges(n, m, save_to_file=False):
     nnz = len(row)    
     data = np.ones(nnz)
 
-    if save_to_file:
+    row_col = [(row[i], col[i]) for i in range(len(row))]
+    row_col = sorted(row_col)
+
+    # TODO: This is broken. When we read the matrix from the edgelist its all fucked up
+    if False:
         with open(f"./data/AB_ensure_n{n}_m{m}.edgelist.txt", "w") as outfile:
             for i in range(0, n):
-                outfile.write(f"{row[i]}\t{col[i]}\n")
-            outfile.write("\n")
+                print(f"Writing {row_col[i][0]}\t{row_col[i][1]}\n")
+                outfile.write(f"{row_col[i][0]}\t{row_col[i][1]}\n")
 
 
     # Generate the sparse matrix only at the end, from the coordinate lists
     graph = coo_matrix((data, (row, col)),  shape=(n, n), dtype=np.int32)
-
 
     return graph.tocsr()
 
@@ -297,9 +301,8 @@ def main():
 
     # log.setLevel(logging.DEBUG)
 
-    n=50
-    m=2
-
+    n=1039
+    m=5
 
     t1 = time.time()
     graph = generate_AB_graph_ensure_m_edges(n=n, m=m, save_to_file=True)

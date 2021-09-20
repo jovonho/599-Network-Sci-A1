@@ -1,11 +1,12 @@
 from functools import total_ordering
+from heapq import nsmallest
 from math import isnan
 from os import altsep
 from typing import Counter
 from matplotlib import lines
 from networkx.algorithms.bipartite.basic import color
 import numpy as np
-from numpy.core.fromnumeric import size, sort
+from numpy.core.fromnumeric import mean, size, sort
 import scipy as sp
 from scipy import sparse, linalg, stats
 import pandas as pd
@@ -14,6 +15,7 @@ import matplotlib.colors as colors
 from numpy.polynomial import Polynomial
 import time
 from scipy.sparse import csgraph
+from scipy.sparse.csr import csr_matrix
 import seaborn as sns
 import math 
 
@@ -76,27 +78,33 @@ def sanity_check(graph, details=False):
 
 
 
-def load_matrix(filename="./data/metabolic.edgelist.txt"):
+def load_matrix(filename="./data/metabolic.edgelist.txt", AB_graph=False):
     t1 = time.time()
     edgelist = np.loadtxt(filename, dtype=np.int32)
 
-    # edgelist = remove_self_edges(edgelist)
-    edgelist = make_symmetric(edgelist)
+    if not AB_graph:
+        edgelist = make_symmetric(edgelist)
     
     # Create the graph in CSC form
     rows = edgelist[:,0]
     cols = edgelist[:,1]
     data = np.ones(len(edgelist))
 
+    # print(list(rows))
+
     n = np.amax(edgelist) + 1
     graph = sparse.coo_matrix((data ,(rows, cols)), shape=(n, n), dtype=np.int32)
-    graph = graph.tocsr()
+    A = graph.tocsr()
 
-    # TODO: Complexity?
-    A = graph + graph.T
+    if not AB_graph:
+        A = graph + graph.T
 
     print(f"A nnz: {A.nnz}")
     print(f"A shape: {A.shape}")
+    degrees = get_degrees(A)
+    total_degree = sum(degrees)
+    print(f"\nTotal degree: {total_degree}")
+    print(f"Average degree: {total_degree / A.shape[0]}")
     
     t2 = time.time()
     print(f"Time to load the graph: {t2-t1} s")
@@ -110,6 +118,8 @@ def a_plot_degree_distrib(A):
     degrees = get_degrees(A)
 
     total_degree = sum(degrees)
+    print(f"A nnz: {A.nnz}")
+    print(f"A shape: {A.shape}")
     print(f"\nTotal degree: {total_degree}")
     print(f"Average degree: {total_degree / A.shape[0]}")
 
@@ -121,16 +131,10 @@ def a_plot_degree_distrib(A):
     counts = Counter(degrees)
     print(counts)
 
-
     k, Nk = list(counts.keys()), np.array(list(counts.values()))
-
 
     # Calculate pk by dividing the number of nodes of a degree by total number of nodes
     pk = list(Nk / N)
-
-    print(f"max k: {max(k)}")
-    print(f"k\n{k}")
-    print(f"pk\n{pk}")
 
     #clean up k and pk
     k_copy = k.copy()
@@ -142,9 +146,6 @@ def a_plot_degree_distrib(A):
             pk.remove(pk_copy[i])
 
     k = np.array(k)
-
-    print(f"k\n{k}")
-    print(f"pk\n{pk}")
 
     stop = np.ceil(np.log10(max(k)))
 
@@ -163,7 +164,6 @@ def a_plot_degree_distrib(A):
     digitized = np.digitize(degrees, bins)
 
     # digitized = np.digitize([10,3,56,2,3,1,1,1,1,5,7], [1,2,4,8]) - 1
-
     print(f"digitized: {digitized}")
 
 
@@ -218,10 +218,10 @@ def a_plot_degree_distrib(A):
             pkn.remove(pkn_copy[i])
 
 
-    print("kn")
-    print(kn)
-    print("pkn")
-    print(pkn)
+    # print("kn")
+    # print(kn)
+    # print("pkn")
+    # print(pkn)
     
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(13, 7))
     # fig, ax2 = plt.subplots(nrows=1, ncols=1, figsize=(8, 7))
@@ -232,6 +232,8 @@ def a_plot_degree_distrib(A):
     ax1.set_xscale('log', base=10)
     ax1.set_yscale('log', base=10)
     ax1.tick_params(which='both', direction="in")
+    ax1.grid(True, which='both', linestyle='--')
+    ax1.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
 
     ax1.scatter(k, pk)
 
@@ -241,6 +243,8 @@ def a_plot_degree_distrib(A):
     ax2.set_xscale('log', base=10)
     ax2.set_yscale('log', base=10)
     ax2.tick_params(which='both', direction="in")
+    ax2.grid(True, which='both', linestyle='--')
+    ax2.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
 
     ax2.scatter(kn, pkn)
 
@@ -258,6 +262,7 @@ def a_plot_degree_distrib(A):
     ax2.plot(kn, yfit2(kn), c='r', label=f"Exp: {fit2.coef[0]}")
     ax2.legend()
 
+    fig.suptitle('Degree Distribution')
     fig.tight_layout()
     plt.show()
 
@@ -306,12 +311,22 @@ def get_clustering_coefs(graph, avg=False):
 # About O(n3)
 def c_plot_shortest_paths(graph):
 
+    N = graph.shape[0]
+
     # TODO Remove this, just to check our results
     import networkx as nx 
 
     G = nx.from_scipy_sparse_matrix(graph)
     nx_sps = nx.shortest_path_length(G)
 
+
+    mean_distances = []
+    for node, sps in nx_sps:
+        mean_dist = sum(sps.values()) / len(sps.values())
+        mean_distances.append(mean_dist)
+
+    mean_distance_global = np.mean(mean_distances)
+    print(f"NX Global mean dist: {mean_distance_global}")
 
 
     t1 = time.time()
@@ -321,25 +336,25 @@ def c_plot_shortest_paths(graph):
 
     # TODO Find out which one is fastest
     shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False)
+    shortest_paths = shortest_paths[np.isfinite(shortest_paths)]
 
-    # Only need 
-    # Can give memory error with large graphs
-    shortest_paths = sparse.triu(shortest_paths)
-
-    avg_sp = shortest_paths.sum() / shortest_paths.nnz
+    # As in the NI book Section 10.2
+    avg_sp = shortest_paths.sum() / (N ** 2)
+    
 
     print(f"Average path length: {avg_sp}")
 
+    shortest_paths = csr_matrix(shortest_paths)
+
+    print(f"Number of shortest path lengths: {len(shortest_paths.data)}")
+
     counts = Counter(shortest_paths.data)
 
-    print(counts)
-
-    print(f"List of all shortest path lengths: {shortest_paths.data}")
 
     t2 = time.time()
     print(f"Time to get shortest paths: {t2-t1} s")
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(9,6))
 
     trans = ax.get_xaxis_transform()
 
@@ -355,7 +370,7 @@ def c_plot_shortest_paths(graph):
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
 
 
-    ax.hist(shortest_paths.data, color='purple')
+    ax.hist(shortest_paths.data, color='purple', bins=5)
     # sns.distplot(shortest_paths.data, hist = False, kde = True, kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
 
     fig.tight_layout()
@@ -367,10 +382,9 @@ def c_plot_shortest_paths(graph):
 def d_get_connected_compo(graph):
     t1 = time.time()
     con_comp, labels = sparse.csgraph.connected_components(graph, directed=False, return_labels=True)
-    print(f"Number of Connected Components: {con_comp}")
+    print(f"\nNumber of Connected Components: {con_comp}")
 
     N = labels.shape[0]
-    print(f"Length of labels (num nodes): {N}")
 
     counts = Counter(labels)
 
@@ -385,7 +399,7 @@ def d_get_connected_compo(graph):
 
 
 
-def get_degree_correl(graph):
+def f_get_degree_correl(graph):
     t1 = time.time()
     degs = get_degrees(graph)
     n = degs.shape[0]
@@ -428,7 +442,8 @@ def get_degree_correl(graph):
     dataset = pd.DataFrame({'di': X, 'dj': Y}, columns=['di', 'dj'])
 
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(9, 6))
+
     ax.set_title("Degree Correlation between nodes i and j")
     ax.set_xlabel("degree of node i")
     ax.set_ylabel("degree of node j")
@@ -483,6 +498,8 @@ def b_plot_clustering_coef_distrib(A):
     ax.grid(True, which='both', linestyle='--')
     ax.tick_params(which='both', direction="in", grid_color='grey', grid_alpha=0.2)
 
+    ax.set_xlim(0,1)
+
     # ax.hist(cc, bins=bins, color='purple')
     # sns.displot(cc, kind='kde', kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
     sns.kdeplot(data=cc, fill=True, color='purple', ax=ax)
@@ -491,7 +508,7 @@ def b_plot_clustering_coef_distrib(A):
     plt.show()
 
 
-def eigenval_distrib(graph):
+def e_get_eigenval_distrib(graph):
 
     t1 = time.time()
 
@@ -569,33 +586,28 @@ def main():
 
     print("\n\n")
 
-    # A = load_matrix("./data/powergrid.edgelist.txt")
-    # A = load_matrix("./data/collaboration.edgelist.txt")
-    # A = load_matrix("./data/metabolic.edgelist.txt")
-    # A = generate_AB_graph(2018, 10, save_to_file=True)
-    # A = load_matrix("./data/AB_n2018_m2.edgelist.txt")
-    # A = generate_AB_graph_ensure_m_edges(2018, 2, save_to_file=True)
-    A = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
+    # G = load_matrix("./data/powergrid.edgelist.txt")
+    G = load_matrix("./data/collaboration.edgelist.txt")
+    # G = load_matrix("./data/metabolic.edgelist.txt")
+    # G = load_matrix("./data/AB_ensure_n1039_m5.edgelist.txt")
 
-    # a_plot_degree_distrib(A)
+    # G = generate_AB_graph_ensure_m_edges(1039, 5)
 
-    # b_plot_clustering_coef_distrib(A)
+    # G = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
 
-    # c_plot_shortest_paths(A)
+    # a_plot_degree_distrib(G)
 
+    # b_plot_clustering_coef_distrib(G)
 
-    # get_degree_correl(A)
+    c_plot_shortest_paths(G)
 
-    g_plot_clustering_degree_rel(A)
+    # d_get_connected_compo(G)
 
-    exit()
+    e_get_eigenval_distrib(G)
 
+    f_get_degree_correl(G)
 
-    d_get_connected_compo(A)
-
-
-    # eigenval_distrib(A)
-
+    # g_plot_clustering_degree_rel(G)
 
 
     t2 = time.time()
