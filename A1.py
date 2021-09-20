@@ -80,12 +80,11 @@ def sanity_check(graph, details=False):
 
 
 
-def load_matrix(filename="./data/metabolic.edgelist.txt", AB_graph=False):
+def load_matrix(filename="./data/metabolic.edgelist.txt"):
     t1 = time.time()
     edgelist = np.loadtxt(filename, dtype=np.int32)
 
-    if not AB_graph:
-        edgelist = make_symmetric(edgelist)
+    edgelist = make_symmetric(edgelist)
     
     # Create the graph in CSC form
     rows = edgelist[:,0]
@@ -98,8 +97,7 @@ def load_matrix(filename="./data/metabolic.edgelist.txt", AB_graph=False):
     graph = sparse.coo_matrix((data ,(rows, cols)), shape=(n, n), dtype=np.int32)
     A = graph.tocsr()
 
-    if not AB_graph:
-        A = graph + graph.T
+    A = graph + graph.T
 
     print(f"A nnz: {A.nnz}")
     print(f"A shape: {A.shape}")
@@ -124,6 +122,11 @@ def a_plot_degree_distrib(A, model_name):
     print(f"A shape: {A.shape}")
     print(f"\nTotal degree: {total_degree}")
     print(f"Average degree: {total_degree / A.shape[0]}")
+
+    with open(f"./figs/{model_name}/model_stats.txt", "w") as outfile:
+        outfile.write(f"A shape: {A.shape}\n")
+        outfile.write(f"Total degree: {total_degree}\n")
+        outfile.write(f"Average degree: {total_degree / A.shape[0]}\n")
 
     N = A.shape[0]
 
@@ -575,16 +578,16 @@ def main():
 
     print("\n\n")
 
-    # G = load_matrix("./data/metabolic.edgelist.txt")
+    # G = load_matrix("./data/powergrid.edgelist.txt")
     # G = load_matrix("./data/collaboration.edgelist.txt")
     # G = load_matrix("./data/email.edgelist.txt")
     # G = load_matrix("./data/AB_ensure_n1039_m5.edgelist.txt")
 
-    G = generate_AB_graph_ensure_m_edges(1039, 5)
+    G = generate_AB_graph_ensure_m_edges(4941, 1)
 
     # G = load_matrix("./data/AB_ensure_n2018_m2.edgelist.txt")
 
-    model_name = "BA model n=1039 m=5"
+    model_name = "BA model n=4941 m=1"
 
     pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
 

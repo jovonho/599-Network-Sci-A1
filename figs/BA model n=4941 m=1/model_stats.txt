@@ -1,0 +1,3 @@
+A shape: (4941, 4941)
+Total degree: 9880
+Average degree: 1.9995952236389394

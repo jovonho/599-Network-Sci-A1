@@ -198,6 +198,8 @@ def generate_AB_graph(n, m):
 
 # Complexity: O(n^2) but much quicker than randomly picking candidates in practice
 def generate_AB_graph_ensure_m_edges(n, m):
+    t1 = time.time()
+
 
     # Initialize our data structures
 
@@ -293,6 +295,9 @@ def generate_AB_graph_ensure_m_edges(n, m):
 
     # Generate the sparse matrix only at the end, from the coordinate lists
     graph = coo_matrix((data, (row, col)),  shape=(n, n), dtype=np.int32)
+
+    t2 = time.time()
+    print(f"Time to generate AB model(n={n}, m={m}) with version 2: {t2-t1} s")
 
     return graph.tocsr()
 
