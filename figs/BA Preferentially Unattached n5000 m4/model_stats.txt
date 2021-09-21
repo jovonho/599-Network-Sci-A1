@@ -1,3 +1,0 @@
-A shape: (5000, 5000)
-Total degree: 39986
-Average degree: 7.9972

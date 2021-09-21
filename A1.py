@@ -119,7 +119,7 @@ def load_matrix(filename="./data/metabolic.edgelist.txt"):
     return A
 
 
-def a_plot_degree_distrib(A, model_name):
+def a_plot_degree_distrib(A, model_name, save_plot=False):
 
     degrees = get_degrees(A)
 
@@ -129,19 +129,16 @@ def a_plot_degree_distrib(A, model_name):
     print(f"\nTotal degree: {total_degree}")
     print(f"Average degree: {total_degree / A.shape[0]}")
 
-    with open(f"./figs/{model_name}/model_stats.txt", "w") as outfile:
-        outfile.write(f"A shape: {A.shape}\n")
-        outfile.write(f"Total degree: {total_degree}\n")
-        outfile.write(f"Average degree: {total_degree / A.shape[0]}\n")
+    if save_plot:
+        with open(f"./figs/{model_name}/model_stats.txt", "w") as outfile:
+            outfile.write(f"A shape: {A.shape}\n")
+            outfile.write(f"Total degree: {total_degree}\n")
+            outfile.write(f"Average degree: {total_degree / A.shape[0]}\n")
 
     N = A.shape[0]
 
-    # print(f"Degrees: {degrees}, len(degrees): {len(degrees)}")
-
     # Count the number of occurence of each degree
     counts = Counter(degrees)
-    # print(counts)
-
     k, Nk = list(counts.keys()), np.array(list(counts.values()))
 
     # Calculate pk by dividing the number of nodes of a degree by total number of nodes
@@ -160,16 +157,10 @@ def a_plot_degree_distrib(A, model_name):
 
     stop = np.ceil(np.log10(max(k)))
 
-    # TODO: Change the num_bins on a per graph basis
     # This is a dark art, too many bins and the first few contain no nodes
     num_bins = int(stop) * 7
 
-    # print(f"Num bins: {num_bins}")
     bins = np.logspace(start=0, stop=stop, base=10, num=num_bins, endpoint=True)
-
-    # bins = np.linspace(start=min(k), stop=max(k), num=num_bins)
-
-    # print(f"Bins: {bins}")
 
     # Subtract 1 to get 0-based indices
     digitized = np.digitize(degrees, bins)
@@ -259,8 +250,11 @@ def a_plot_degree_distrib(A, model_name):
     fig.suptitle(f"{model_name}: Degree Distribution")
     fig.tight_layout()
 
-    plt.savefig(f"./figs/{model_name}/1 - Degree Distrib.png", format="png")
-    plt.close()
+    if save_plot:
+        plt.savefig(f"./figs/{model_name}/1 - Degree Distrib.png", format="png")
+        plt.close()
+    else:
+        plt.show()
 
 
 def get_degrees(graph):
@@ -304,12 +298,10 @@ def get_clustering_coefs(graph, avg=False):
     return clustering_coefs, deg
 
 
-def b_plot_clustering_coef_distrib(A, model_name):
+def b_plot_clustering_coef_distrib(A, model_name, save_plot=False):
     cc, _, avg_cc = get_clustering_coefs(A, avg=True)
 
     print(f"\nAvg cc: {avg_cc}")
-
-    counts = Counter(cc)
 
     fig, ax = plt.subplots(figsize=(13, 7))
 
@@ -329,42 +321,26 @@ def b_plot_clustering_coef_distrib(A, model_name):
     ax.grid(True, which="both", linestyle="--")
     ax.tick_params(which="both", direction="in", grid_color="grey", grid_alpha=0.2)
 
-    # ax.set_xlim(0, 1)
+    ax.set_xlim(0, max(cc))
 
-    # ax.hist(cc, bins=bins, color='purple')
-    # sns.displot(cc, kind='kde', kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
     sns.kdeplot(data=cc, fill=True, color="purple", ax=ax)
 
     fig.tight_layout()
-    plt.savefig(f"./figs/{model_name}/2 - Clustering Coef.png", format="png")
-    plt.close()
+
+    if save_plot:
+        plt.savefig(f"./figs/{model_name}/2 - Clustering Coef.png", format="png")
+        plt.close()
+    else:
+        plt.show()
 
 
-# It does phonecalls in ~7min
-# About O(n3)
-def c_plot_shortest_paths(graph, model_name):
+def c_plot_shortest_paths(graph, model_name, save_plot=False):
+    t1 = time.time()
 
     N = graph.shape[0]
 
-    # # TODO Remove this, its just to check our results
-    # import networkx as nx
-
-    # G = nx.from_scipy_sparse_matrix(graph)
-    # nx_sps = nx.shortest_path_length(G)
-
-    # mean_distances = []
-    # for _, sps in nx_sps:
-    #     mean_dist = sum(sps.values()) / len(sps.values())
-    #     mean_distances.append(mean_dist)
-
-    # mean_distance_global = np.mean(mean_distances)
-    # print(f"NX Average path length: {mean_distance_global}")
-
-    t1 = time.time()
-
     # Saw the note in documentation about D possible conflict with directed=False
     # but our graphs are always symmetric so should work fine.
-    # shortest_paths = sparse.csgraph.shortest_path(graph, method='D', directed=False, unweighted=True )
     shortest_paths = sparse.csgraph.shortest_path(graph, method="D", directed=False)
     shortest_paths = shortest_paths[np.isfinite(shortest_paths)]
 
@@ -394,50 +370,54 @@ def c_plot_shortest_paths(graph, model_name):
     ax.tick_params(which="both", direction="in", grid_color="grey", grid_alpha=0.2)
 
     ax.hist(shortest_paths.data, color="purple", bins=5)
-    # sns.distplot(shortest_paths.data, hist = False, kde = True, kde_kws = {'color': 'purple', 'shade': True}, ax=ax)
 
     fig.tight_layout()
-    plt.savefig(f"./figs/{model_name}/3 - Shortest Paths.png", format="png")
-    plt.close()
+
+    if save_plot:
+        plt.savefig(f"./figs/{model_name}/3 - Shortest Paths.png", format="png")
+        plt.close()
+    else:
+        plt.show()
 
 
-def d_get_connected_compo(graph, model_name):
+def d_get_connected_compo(graph, model_name, save_plot=False):
     t1 = time.time()
+
     con_comp, labels = sparse.csgraph.connected_components(
         graph, directed=False, return_labels=True
     )
-    print(f"\nNumber of Connected Components: {con_comp}")
 
     N = labels.shape[0]
 
     counts = Counter(labels)
 
-    GCC, GCC_len = counts.most_common(1)[0]
+    _, GCC_len = counts.most_common(1)[0]
 
     nodes_in_GCC = GCC_len / N
-
-    print(f"Proportion of nodes in GCC: {nodes_in_GCC}")
 
     t2 = time.time()
     print(f"Time to get comnnected components: {t2-t1} s")
 
-    with open(f"./figs/{model_name}/4 - Connected Components.txt", "w") as outfile:
-        outfile.write(f"Number of Connected Components:\t\t{con_comp}\n")
-        outfile.write(f"Proportion of nodes in GCC:\t\t{nodes_in_GCC}\n")
+    if save_plot:
+        with open(f"./figs/{model_name}/4 - Connected Components.txt", "w") as outfile:
+            outfile.write(f"Number of Connected Components:\t\t{con_comp}\n")
+            outfile.write(f"Proportion of nodes in GCC:\t\t{nodes_in_GCC}\n")
+
+    print(f"Number of Connected Components:\t\t{con_comp}\n")
+    print(f"Proportion of nodes in GCC:\t\t{nodes_in_GCC}\n")
 
 
-def e_get_eigenval_distrib(graph, model_name, k=100):
-
+def e_get_eigenval_distrib(graph, model_name, k=100, save_plot=False):
     t1 = time.time()
 
     L = sparse.csgraph.laplacian(graph)
 
-    # Need to use float
     eigenvals_L = sparse.linalg.eigsh(L.asfptype(), k=k, return_eigenvectors=False, which="SM")
 
     t2 = time.time()
-    print(f"Time to gt {k} Eigenvals: {t2-t1} s")
+    print(f"Time to get {k} Eigenvals: {t2-t1} s")
 
+    # Hack to get the number of zero values, we were getting extremely small but non-zero floats otherwise
     num_zeros = sparse.csgraph.connected_components(
         sp.sparse.csgraph.laplacian(graph), directed=False, return_labels=False
     )
@@ -470,11 +450,14 @@ def e_get_eigenval_distrib(graph, model_name, k=100):
     ax.legend()
     fig.tight_layout()
 
-    plt.savefig(f"./figs/{model_name}/5 - Eigenvalues.png", format="png")
-    plt.close()
+    if save_plot:
+        plt.savefig(f"./figs/{model_name}/5 - Eigenvalues.png", format="png")
+        plt.close()
+    else:
+        plt.show()
 
 
-def f_get_degree_correl(graph, model_name):
+def f_get_degree_correl(graph, model_name, save_plot=False):
     t1 = time.time()
     degs = get_degrees(graph)
     n = degs.shape[0]
@@ -488,26 +471,19 @@ def f_get_degree_correl(graph, model_name):
         if i % 2000 == 0:
             print(f"on row {i}")
         row = graph.getrow(i).toarray()[0]
-        # print(f"Row {i}: {row}")
 
         for j in range(n):
             if row[j] == 1:
-                # print(f"Node {i} links to node {j}")
                 X.append(degs[i])
                 Y.append(degs[j])
 
     t2 = time.time()
     print(f"Time to calculate degree correlations: {t2-t1} s")
 
-    # Doesn't seem like it should work but compared with the one NX gives, it seems fine
-    slope, intercept, r_value, p_value, std_err = stats.linregress(X, Y)
-    print(f"R value {r_value}")
+    # Doesn't seem like it should work but cross-referenced with NX and it was similar
+    _, _, r_value, _, _ = stats.linregress(X, Y)
 
-    import networkx
-
-    G = networkx.from_scipy_sparse_matrix(graph)
-    r_value = networkx.algorithms.assortativity.degree_pearson_correlation_coefficient(G)
-    print(f"R value from nx {r_value}")
+    print(f"R value: {r_value}")
 
     fig, ax = plt.subplots(figsize=(9, 6))
 
@@ -530,16 +506,17 @@ def f_get_degree_correl(graph, model_name):
         X, Y, s=1, c=density, cmap="gist_yarg", norm=colors.LogNorm(vmin=1, vmax=max(density) / 1.5)
     )
 
-    # Old version, showed less detail
-    # sns.histplot(data=dataset, x="di", y="dj", discrete=(True, True), binwidth=50, cbar=True, ax=ax)
-
     ax.legend()
     fig.tight_layout()
-    plt.savefig(f"./figs/{model_name}/6 - Degree Correlation.png", format="png")
-    plt.close()
+
+    if save_plot:
+        plt.savefig(f"./figs/{model_name}/6 - Degree Correlation.png", format="png")
+        plt.close()
+    else:
+        plt.show()
 
 
-def g_plot_clustering_degree_rel(A, model_name):
+def g_plot_clustering_degree_rel(A, model_name, save_plot=False):
 
     cc, d = get_clustering_coefs(A)
 
@@ -566,8 +543,11 @@ def g_plot_clustering_degree_rel(A, model_name):
     )
 
     fig.tight_layout()
-    plt.savefig(f"./figs/{model_name}/7 - CC vs Degree.png", format="png")
-    plt.close()
+    if save_plot:
+        plt.savefig(f"./figs/{model_name}/7 - CC vs Degree.png", format="png")
+        plt.close()
+    else:
+        plt.show()
 
 
 def main():
@@ -602,32 +582,28 @@ def main():
 
     # e_get_eigenval_distrib(G_BA_n1039_m5, model_name, k=100)
 
-    t1 = time.time()
+    # G_BA_n1039_m5 = generate_BA_graph_preferential_inattachment(2018, 2)
 
-    G_BA_n1039_m5 = generate_BA_graph_preferential_inattachment(1039, 5)
+    G_BA_n1039_m5 = generate_BA_graph_ensure_m_edges(2018, 2)
 
     # model_name = "BA model n=4941 m=1 v2"
-    model_name = "BA Preferential Unattachment n=1039 m=5"
+    model_name = "Protein Imitation n=2018 m=2"
 
     pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
 
     # a_plot_degree_distrib(G_BA_n1039_m5, model_name)
 
-    b_plot_clustering_coef_distrib(G_BA_n1039_m5, model_name)
+    b_plot_clustering_coef_distrib(G_BA_n1039_m5, model_name, save_plot=True)
 
-    exit()
+    # c_plot_shortest_paths(G_BA_n1039_m5, model_name)
 
-    c_plot_shortest_paths(G_BA_n1039_m5, model_name)
+    # d_get_connected_compo(G_BA_n1039_m5, model_name)
 
-    d_get_connected_compo(G_BA_n1039_m5, model_name)
+    # f_get_degree_correl(G_BA_n1039_m5, model_name)
 
-    f_get_degree_correl(G_BA_n1039_m5, model_name)
+    # g_plot_clustering_degree_rel(G_BA_n1039_m5, model_name)
 
-    g_plot_clustering_degree_rel(G_BA_n1039_m5, model_name)
-
-    e_get_eigenval_distrib(G_BA_n1039_m5, model_name, k=100)
-
-    t1 = time.time()
+    # e_get_eigenval_distrib(G_BA_n1039_m5, model_name, k=100)
 
     exit()
     #

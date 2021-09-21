@@ -275,21 +275,11 @@ def generate_BA_graph_ensure_m_edges(n, m):
     nnz = len(row)
     data = np.ones(nnz)
 
-    row_col = [(row[i], col[i]) for i in range(len(row))]
-    row_col = sorted(row_col)
-
-    # TODO: This is broken. When we read the matrix from the edgelist its all fucked up
-    if False:
-        with open(f"./data/AB_ensure_n{n}_m{m}.edgelist.txt", "w") as outfile:
-            for i in range(0, n):
-                print(f"Writing {row_col[i][0]}\t{row_col[i][1]}\n")
-                outfile.write(f"{row_col[i][0]}\t{row_col[i][1]}\n")
-
     # Generate the sparse matrix only at the end, from the coordinate lists
     graph = coo_matrix((data, (row, col)), shape=(n, n), dtype=np.int32)
 
     t2 = time.time()
-    print(f"Time to generate AB model(n={n}, m={m}) with version 2: {t2-t1} s")
+    print(f"Time to generate AB model(n={n}, m={m}): {t2-t1} s")
 
     return graph.tocsr()
 
