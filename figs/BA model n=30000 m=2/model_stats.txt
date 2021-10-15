@@ -1,0 +1,3 @@
+A shape: (30000, 30000)
+Total degree: 119994
+Average degree: 3.9998

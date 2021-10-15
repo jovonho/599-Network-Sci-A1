@@ -1,7 +1,0 @@
-In degree correl:
-
-Size of X: 186878
-Size of Y: 186878
-
-Size of CC: 23133
-Size of degrees: 23133

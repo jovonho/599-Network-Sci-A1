@@ -1,9 +1,0 @@
-Do we link node 2 w node 0? True
-Traceback (most recent call last):
-  File "C:\Users\lhv\VSCode\COMP599\Assignment1\ABmodel.py", line 56, in <module>
-    main()
-  File "C:\Users\lhv\VSCode\COMP599\Assignment1\ABmodel.py", line 52, in main
-    graph = generate_AB_graph(n=10)
-  File "C:\Users\lhv\VSCode\COMP599\Assignment1\ABmodel.py", line 26, in generate_AB_graph
-    for k, k_deg in degrees.items():
-RuntimeError: dictionary changed size during iteration
