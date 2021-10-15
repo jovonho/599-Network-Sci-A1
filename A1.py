@@ -509,19 +509,19 @@ def main():
         Load and analyze the edgelist networks from Barabasi
     """
 
-    # G = load_matrix("./data/metabolic.edgelist.txt")
+    G = load_matrix("./data/metabolic.edgelist.txt")
 
-    # model_name = "Metabolic"
+    model_name = "Metabolic"
 
-    # pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(f"./figs/{model_name}").mkdir(parents=True, exist_ok=True)
 
-    # a_plot_degree_distrib(G, model_name, show_plot=True, save_plot=False)
-    # b_plot_clustering_coef_distrib(G, model_name, show_plot=True, save_plot=False)
-    # c_plot_shortest_paths(G, model_name, show_plot=True, save_plot=False)
-    # d_get_connected_compo(G, model_name, save_plot=False)
-    # e_get_eigenval_distrib(G, model_name, k=100, show_plot=True, save_plot=False)
-    # f_get_degree_correl(G, model_name, show_plot=True, save_plot=False)
-    # g_plot_clustering_degree_rel(G, model_name, show_plot=True, save_plot=False)
+    a_plot_degree_distrib(G, model_name, show_plot=True, save_plot=False)
+    b_plot_clustering_coef_distrib(G, model_name, show_plot=True, save_plot=False)
+    c_plot_shortest_paths(G, model_name, show_plot=True, save_plot=False)
+    d_get_connected_compo(G, model_name, save_plot=False)
+    e_get_eigenval_distrib(G, model_name, k=100, show_plot=True, save_plot=False)
+    f_get_degree_correl(G, model_name, show_plot=True, save_plot=False)
+    g_plot_clustering_degree_rel(G, model_name, show_plot=True, save_plot=False)
 
     """
         Generate and analyze a BA Model graph
